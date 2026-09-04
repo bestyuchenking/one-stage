@@ -4,24 +4,25 @@ import './styles.css'
 
 type Section = 'home' | 'design' | 'entertainment' | 'cultural' | 'about' | 'contact'
 
-const designCategories = [
-  ['01', '豪宅景观', 'Residential'],
-  ['02', '公园景观', 'Park'],
-  ['03', '商业景观', 'Commercial'],
-  ['04', '酒店景观', 'Hotel'],
-  ['05', '庭院景观', 'Garden'],
-  ['06', '改造项目', 'Renovation'],
+type Category = '豪宅景观' | '公园景观' | '商业景观' | '酒店景观' | '庭院景观' | '改造项目'
+
+const designCategories: { n: string; cn: Category; en: string }[] = [
+  { n: '01', cn: '豪宅景观', en: 'Residential' },
+  { n: '02', cn: '公园景观', en: 'Park' },
+  { n: '03', cn: '商业景观', en: 'Commercial' },
+  { n: '04', cn: '酒店景观', en: 'Hotel' },
+  { n: '05', cn: '庭院景观', en: 'Garden' },
+  { n: '06', cn: '改造项目', en: 'Renovation' },
 ]
 
-const projects = [
+const projects: { n: string; title: string; category: Category; meta: string; image: string }[] = [
   { n: '01', title: '上海壹号院', category: '豪宅景观', meta: 'Shanghai · 2024', image: '/one-stage/assets/shanghai-one-central-park.jpg' },
   { n: '02', title: '温州华润瑞府', category: '豪宅景观', meta: 'Wenzhou · 2023', image: '/one-stage/assets/wenzhou-crest-residence.jpg' },
   { n: '03', title: '湖州绿城锦玉园', category: '豪宅景观', meta: 'Huzhou · 2020', image: '/one-stage/assets/huzhou-jade-garden.jpg' },
   { n: '04', title: '平阳郁金香公园', category: '公园景观', meta: 'Pingyang · 2018', image: '/one-stage/assets/park.jpg' },
   { n: '05', title: '启东 Delta 酒店', category: '酒店景观', meta: 'Qidong · 2020', image: '/one-stage/assets/hotel.jpg' },
   { n: '06', title: '深圳湾万象城水幕广场', category: '商业景观', meta: 'Shenzhen · 2024', image: '/one-stage/assets/wave-plaza.jpg' },
-  { n: '07', title: '文成嘉南美地', category: '庭院景观', meta: 'Wencheng · 2012–2022', image: '/one-stage/assets/canaan-resort.jpg' },
-  { n: '08', title: '改造项目', category: '改造项目', meta: 'Selected work', image: '' },
+  { n: '07', title: '文成嘉南美地', category: '酒店景观', meta: 'Wencheng · 2012–2022', image: '/one-stage/assets/canaan-resort.jpg' },
 ]
 
 function ProjectImage({ src, className = '' }: { src?: string; className?: string }) {
@@ -32,8 +33,18 @@ function ProjectImage({ src, className = '' }: { src?: string; className?: strin
 function App() {
   const [section, setSection] = useState<Section>('home')
   const [menu, setMenu] = useState(false)
+  const [activeCategory, setActiveCategory] = useState<Category | 'ALL'>('ALL')
 
   const go = (s: Section) => { setSection(s); setMenu(false); window.scrollTo({ top: 0, behavior: 'smooth' }) }
+
+  const showCategory = (category: Category | 'ALL') => {
+    setActiveCategory(category)
+    window.setTimeout(() => document.getElementById('design-projects')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50)
+  }
+
+  const visibleProjects = activeCategory === 'ALL'
+    ? projects
+    : projects.filter(project => project.category === activeCategory)
 
   return <div className="site">
     <header className="header">
@@ -73,8 +84,21 @@ function App() {
 
     {section === 'design' && <main className="page">
       <PageTitle no="01" en="OneStage Design" cn="壹阶设计" desc="Landscape architecture / Spatial experience / Place making" />
-      <div className="category-list">{designCategories.map(([n, cn, en]) => <div className="category" key={n}><span>{n}</span><div><h3>{cn}</h3><p>{en}</p></div><span>↗</span></div>)}</div>
-      <div className="project-grid">{projects.map(p => <article className="project" key={p.n}><ProjectImage src={p.image} className={`p${p.n}`}/><div className="project-info"><span>{p.n}</span><div><h3>{p.title}</h3><p>{p.category} · {p.meta}</p></div><span>↗</span></div></article>)}</div>
+      <div className="category-list">
+        <button className={`category ${activeCategory === 'ALL' ? 'selected' : ''}`} onClick={() => showCategory('ALL')}>
+          <span>00</span><div><h3>全部项目</h3><p>All Projects</p></div><span>↗</span>
+        </button>
+        {designCategories.map(({ n, cn, en }) => <button className={`category ${activeCategory === cn ? 'selected' : ''}`} key={n} onClick={() => showCategory(cn)}>
+          <span>{n}</span><div><h3>{cn}</h3><p>{en}</p></div><span>↗</span>
+        </button>)}
+      </div>
+      <div id="design-projects" className="project-section-heading"><span>SELECTED PROJECTS</span><span>{activeCategory === 'ALL' ? 'ALL' : activeCategory}</span></div>
+      {visibleProjects.length > 0 ? <div className="project-grid">
+        {visibleProjects.map(p => <article className="project" key={p.n}>
+          <ProjectImage src={p.image} className={`p${p.n}`}/>
+          <div className="project-info"><span>{p.n}</span><div><h3>{p.title}</h3><p>{p.category} · {p.meta}</p></div><span>↗</span></div>
+        </article>)}
+      </div> : <div className="empty-category"><span>COMING SOON</span><p>该门类的项目资料正在整理中。</p></div>}
     </main>}
 
     {section === 'entertainment' && <main className="page">
@@ -91,9 +115,9 @@ function App() {
 
     {section === 'about' && <main className="page about"><PageTitle no="04" en="About" cn="关于 OneStage" desc="A personal creative practice by Kim King."/><div className="about-grid"><ProjectImage src="/one-stage/assets/shanghai-one-central-park.jpg"/><div><p className="large">OneStage Studio is a personal platform for landscape design, media and cultural practice.</p><p>这里不是一份传统意义上的简历，而是一处用来呈现作品、记录思考，并连接不同创作方向的个人空间。</p><p>Landscape Architect · Project Manager · Podcaster · Writer</p></div></div></main>}
 
-    {section === 'contact' && <main className="page contact"><PageTitle no="05" en="Contact" cn="联系" desc="For projects, collaborations and conversations."/><div className="contact-block"><p className="eyebrow">GET IN TOUCH</p><p className="contact-note">Contact details coming soon.</p><p>Shanghai / China</p></div></main>}
+    {section === 'contact' && <main className="page contact"><PageTitle no="05" en="Contact" cn="联系" desc="For projects, collaborations and conversations."/><div className="contact-block"><p className="eyebrow">GET IN TOUCH</p><a className="contact-note" href="mailto:bestyuchenking@aliyun.com">bestyuchenking@aliyun.com</a><p>Shanghai / China</p></div></main>}
 
-    <footer><div className="footer-brand"><img src="/one-stage/assets/logo.jpg" alt="" /></div><div>DESIGN · ENTERTAINMENT · CULTURAL</div><div>© 2026</div></footer>
+    <footer><div className="footer-brand"><img src="/one-stage/assets/logo.jpg" alt="OneStage Studio" /></div><div>DESIGN · ENTERTAINMENT · CULTURAL</div><div>© 2026</div></footer>
   </div>
 }
 
