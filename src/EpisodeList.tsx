@@ -54,6 +54,7 @@ export default function EpisodeList({ lang }: { lang: Lang }) {
   }, [])
 
   const currentEpisode = current === null ? episodes[0] : episodes[current]
+  const currentEpisodeNumber = currentEpisode?.title.match(/^\s*(\d{1,4})[.．]/)?.[1] || '01'
   const hasMore = visible < episodes.length
   const shownEpisodes = useMemo(() => episodes.slice(0, visible), [episodes, visible])
 
@@ -79,14 +80,14 @@ export default function EpisodeList({ lang }: { lang: Lang }) {
   }
 
   const label = lang === 'en'
-    ? { latest: 'LATEST EPISODE', all: 'ALL EPISODES', more: 'SHOW MORE EPISODES', empty: 'Audio episodes are loading.' }
+    ? { latest: 'LATEST EPISODE', all: 'ALL EPISODES', more: 'SEE MORE EPISODES', empty: 'Audio episodes are loading.' }
     : { latest: '最新一期', all: '全部节目', more: '查看更多节目', empty: '音频节目正在加载。' }
 
   return <section className="episode-browser">
     <audio ref={audioRef} preload="none" />
     <div className="section-label"><span>{label.all}</span><span>RSS</span></div>
     {currentEpisode ? <div className="episode-feature">
-      <div className="episode-feature-top"><span className="episode-feature-kicker">{label.latest}</span><span className="episode-feature-number">{String(current === null ? 0 : current + 1).padStart(3, '0')}</span></div>
+      <div className="episode-feature-top"><span className="episode-feature-kicker">{label.latest}</span><span className="episode-feature-number">{currentEpisodeNumber}</span></div>
       <button className="episode-feature-main" onClick={() => toggleEpisode(current === null ? 0 : current)} aria-label={playing ? 'Pause episode' : 'Play episode'}>
         <span className="episode-feature-play"><PlayIcon playing={playing} /></span>
         <span className="episode-feature-copy"><strong>{currentEpisode.title}</strong><span>{playing ? 'PLAYING' : 'READY TO PLAY'}{currentEpisode.duration ? ` · ${currentEpisode.duration}` : ''}</span></span>
