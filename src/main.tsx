@@ -1,86 +1,160 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import './styles.css'
+import EpisodeList from './EpisodeList'
 
 type Section = 'home' | 'design' | 'entertainment' | 'cultural' | 'about' | 'contact'
 type Category = 'residential' | 'park' | 'commercial' | 'hotel' | 'garden' | 'renovation'
 type Lang = 'en' | 'zh'
 
+type Project = {
+  id: string
+  enTitle: string
+  zhTitle: string
+  category: Category
+  meta: string
+  images: string[]
+}
+
 const designCategories: { n: string; key: Category; en: string; zh: string }[] = [
-  { n: '01', key: 'residential', en: 'Residential', zh: '豪宅景观' }, { n: '02', key: 'park', en: 'Park', zh: '公园景观' },
-  { n: '03', key: 'commercial', en: 'Commercial', zh: '商业景观' }, { n: '04', key: 'hotel', en: 'Hotel', zh: '酒店景观' },
-  { n: '05', key: 'garden', en: 'Garden', zh: '庭院景观' }, { n: '06', key: 'renovation', en: 'Renovation', zh: '改造项目' },
+  { n: '01', key: 'residential', en: 'Residential', zh: '豪宅景观' },
+  { n: '02', key: 'park', en: 'Park', zh: '公园景观' },
+  { n: '03', key: 'commercial', en: 'Commercial', zh: '商业景观' },
+  { n: '04', key: 'hotel', en: 'Hotel', zh: '酒店景观' },
+  { n: '05', key: 'garden', en: 'Garden', zh: '庭院景观' },
+  { n: '06', key: 'renovation', en: 'Renovation', zh: '改造项目' },
 ]
-const projects = [
-  { n:'01', enTitle:'One Central Park', zhTitle:'上海壹号院', category:'residential' as Category, meta:'Shanghai · 2024' },
-  { n:'02', enTitle:'CR Land Crest Residence', zhTitle:'温州华润瑞府', category:'residential' as Category, meta:'Wenzhou · 2023' },
-  { n:'03', enTitle:'Greentown Majestic Mansion', zhTitle:'湖州绿城锦玉园', category:'residential' as Category, meta:'Huzhou · 2020' },
-  { n:'04', enTitle:'Coast Spring', zhTitle:'平阳郁金香公园', category:'park' as Category, meta:'Pingyang · 2018' },
-  { n:'05', enTitle:'Qidong Delta Hotel', zhTitle:'启东Delta酒店', category:'hotel' as Category, meta:'Qidong · 2020' },
-  { n:'06', enTitle:'Shenzhen Bay The Mix City Stage 2 Wave Plaza', zhTitle:'深圳湾万象城二期水幕广场', category:'commercial' as Category, meta:'Shenzhen · 2024' },
-  { n:'07', enTitle:'Canaan Villa', zhTitle:'文成嘉南美地', category:'hotel' as Category, meta:'Wencheng · 2012–2022' },
+
+const img = (id: string, count: number) => Array.from({ length: count }, (_, i) => `/one-stage/assets/project${id}_${i + 1}.jpg`)
+
+const projects: Project[] = [
+  { id:'01', enTitle:'One Central Park', zhTitle:'上海壹号院', category:'residential', meta:'Shanghai · 2024', images:img('01',3) },
+  { id:'02', enTitle:'CR Land Crest Residence', zhTitle:'温州华润瑞府', category:'residential', meta:'Wenzhou · 2023', images:img('02',4) },
+  { id:'03', enTitle:'Greentown Majestic Mansion', zhTitle:'湖州绿城锦玉园', category:'residential', meta:'Huzhou · 2020', images:img('03',4) },
+  { id:'04', enTitle:'Coast Spring', zhTitle:'平阳郁金香公园', category:'park', meta:'Pingyang · 2018', images:img('04',3) },
+  { id:'05', enTitle:'Qidong Delta Hotel', zhTitle:'启东Delta酒店', category:'hotel', meta:'Qidong · 2020', images:img('05',2) },
+  { id:'06', enTitle:'Shenzhen Bay The Mix City Stage 2 Wave Plaza', zhTitle:'深圳湾万象城二期水幕广场', category:'commercial', meta:'Shenzhen · 2024', images:img('06',3) },
+  { id:'07', enTitle:'Canaan Villa', zhTitle:'文成嘉南美地', category:'hotel', meta:'Wencheng · 2012–2022', images:img('07',4) },
+  { id:'08', enTitle:'Imperial Garden Villa 188 Courtyard', zhTitle:'上海御品园林188号别墅庭院', category:'garden', meta:'Shanghai · 2023', images:img('08',2) },
+  { id:'09', enTitle:'Ronshine Mansion 18# Courtyard', zhTitle:'杭州萧山公馆18号联排庭院', category:'garden', meta:'Hangzhou · 2023', images:img('09',2) },
+  { id:'10', enTitle:'Lakeside Villa No.69 Courtyard & Roof Garden', zhTitle:'上海远香湖九号69号联排庭院及屋顶花园', category:'garden', meta:'Shanghai · 2024', images:img('10',1) },
+  { id:'11', enTitle:'Huzhou Kangshan No.1 A3-103 Private Courtyard', zhTitle:'湖州康山壹号A3-103别墅庭院', category:'garden', meta:'Huzhou · 2024', images:img('11',5) },
+  { id:'12', enTitle:'One Riviera', zhTitle:'上海浦东新区·壹滨江', category:'renovation', meta:'Shanghai · Landscape Renovation', images:img('12',4) },
 ]
+
 const categoryLabel = (key: Category, lang: Lang) => designCategories.find(c => c.key === key)?.[lang === 'en' ? 'en' : 'zh'] ?? key
-const projectImages = (n: string) => Array.from({length:4}, (_,i) => `/one-stage/assets/project${n}_${i+1}.jpg`)
 
 function Placeholder({ children='IMAGE PLACEHOLDER', className='' }: { children?: React.ReactNode; className?: string }) {
   return <div className={`placeholder ${className}`}><span>{children}</span></div>
 }
 
-function ProjectImageCarousel({ project }: { project: typeof projects[number] }) {
-  const [index,setIndex] = useState(0)
-  const [failed,setFailed] = useState<Record<number,boolean>>({})
-  const [hover,setHover] = useState(false)
-  const [touchX,setTouchX] = useState<number|null>(null)
-  const timer = useRef<ReturnType<typeof setInterval>|null>(null)
-  const sources = projectImages(project.n)
-  const available = sources.map((src,i)=>({src,i})).filter(x=>!failed[x.i])
-  const current = available.findIndex(x=>x.i===index)
-  const shown = available[current>=0?current:0]
-  const next = () => { if(available.length>1){ const pos=Math.max(0,current); setIndex(available[(pos+1)%available.length].i) } }
-  const prev = () => { if(available.length>1){ const pos=Math.max(0,current); setIndex(available[(pos-1+available.length)%available.length].i) } }
-  useEffect(()=>{
-    if(timer.current){clearInterval(timer.current);timer.current=null}
-    if(hover && available.length>1) timer.current=setInterval(next,1800)
-    return ()=>{if(timer.current)clearInterval(timer.current)}
-  },[hover,index,available.length])
-  return <div className="project-carousel" onMouseEnter={()=>setHover(true)} onMouseLeave={()=>setHover(false)} onTouchStart={e=>setTouchX(e.touches[0].clientX)} onTouchEnd={e=>{if(touchX===null)return;const dx=e.changedTouches[0].clientX-touchX;if(Math.abs(dx)>40){dx<0?next():prev()}setTouchX(null)}}>
+function ProjectImageCarousel({ project }: { project: Project }) {
+  const [index, setIndex] = useState(0)
+  const [available, setAvailable] = useState(project.images)
+  const [hover, setHover] = useState(false)
+  const [touchX, setTouchX] = useState<number | null>(null)
+  const timer = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  useEffect(() => {
+    setAvailable(project.images)
+    setIndex(0)
+  }, [project.id])
+
+  const next = () => setIndex(i => available.length > 1 ? (i + 1) % available.length : 0)
+  const prev = () => setIndex(i => available.length > 1 ? (i - 1 + available.length) % available.length : 0)
+
+  useEffect(() => {
+    if (timer.current) clearInterval(timer.current)
+    if (hover && available.length > 1) timer.current = setInterval(next, 1800)
+    return () => { if (timer.current) clearInterval(timer.current) }
+  }, [hover, available.length])
+
+  const shown = available[index]
+  return <div className="project-carousel" onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)} onTouchStart={e => setTouchX(e.touches[0].clientX)} onTouchEnd={e => { if (touchX === null) return; const dx = e.changedTouches[0].clientX - touchX; if (Math.abs(dx) > 40) dx < 0 ? next() : prev(); setTouchX(null) }}>
     <div className="project-carousel-frame">
-      {shown ? <img src={shown.src} alt={project.enTitle} loading="lazy" onError={()=>setFailed(v=>({...v,[shown.i]:true}))}/> : <Placeholder/>}
-      {available.length>1 && <><button className="carousel-arrow prev" onClick={prev} aria-label="Previous image">←</button><button className="carousel-arrow next" onClick={next} aria-label="Next image">→</button><div className="carousel-count">{String(current+1).padStart(2,'0')} / {String(available.length).padStart(2,'0')}</div><div className="carousel-dots">{available.map((x,i)=><span key={x.i} className={i===current?'active':''}/>)}</div></>}
+      {shown ? <img src={shown} alt={project.enTitle} loading="lazy" onError={() => setAvailable(v => v.filter(x => x !== shown))} /> : <Placeholder />}
+      {available.length > 1 && <>
+        <button className="carousel-arrow prev" onClick={prev} aria-label="Previous image">←</button>
+        <button className="carousel-arrow next" onClick={next} aria-label="Next image">→</button>
+        <div className="carousel-count">{String(index + 1).padStart(2, '0')} / {String(available.length).padStart(2, '0')}</div>
+        <div className="carousel-dots">{available.map((x, i) => <span key={x} className={i === index ? 'active' : ''} />)}</div>
+      </>}
     </div>
   </div>
 }
 
-function Entertainment({lang}:{lang:Lang}) {
+function Entertainment({ lang }: { lang: Lang }) {
   const youtubeEmbed = 'https://www.youtube.com/embed/v9qaddGKum8?rel=0'
   const bilibiliUrl = 'https://b23.tv/NvH8KU3'
   return <main className="page entertainment-page">
     <PageTitle no="02" lang={lang} en="OneStage Entertainment" zh="壹阶娱乐" descEn="Podcast / Video / Audio storytelling" descZh="播客 / 影像 / 声音叙事" />
-    <section className="show-intro"><div><p className="eyebrow">ORIGINAL PODCAST</p><h2>{lang==='en'?'NiúMǎ Holiday':'牛马假日'}</h2><p className="show-desc">{lang==='en'?'A podcast documenting the lives, work and small absurdities of ordinary working people.':'一档记录普通打工人故事的播客。聊工作，也聊生活，以及那些发生在“牛马”与“假日”之间的真实切片。'}</p></div><div className="show-meta"><span>01 / ONESTAGE ENTERTAINMENT</span><span>{lang==='en'?'AUDIO + VIDEO PODCAST':'音频 + 视频播客'}</span></div></section>
-    <section className="media-layout">
-      <div className="audio-column"><div className="section-label"><span>{lang==='en'?'ALL EPISODES':'全部节目'}</span><span>RSS</span></div><div className="rss-player"><iframe title={lang==='en'?'NiúMǎ Holiday all episodes':'牛马假日全部节目'} src="https://play.prx.org/e?uf=https%3A%2F%2Ffeed.xyzfm.space%2Fr6r6p7dccgbw&sp=all&th=light" loading="lazy"/></div><p className="feed-note">{lang==='en'?'Select any episode to listen.':'可直接选择任意一期收听。'}</p></div>
-      <div className="video-column"><div className="section-label"><span>{lang==='en'?'LATEST VIDEO':'最新视频'}</span><span>{lang==='en'?'YOUTUBE':'BILIBILI'}</span></div>{lang==='en' ? <div className="video-embed"><iframe title="NiúMǎ Holiday latest video on YouTube" src={youtubeEmbed} loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen/></div> : <a className="video-link-card" href={bilibiliUrl} target="_blank" rel="noreferrer"><div className="video-link-inner"><span className="video-link-kicker">BILIBILI</span><strong>打开《牛马假日》最新视频</strong><span className="video-link-url">b23.tv/NvH8KU3 ↗</span></div></a>}<p className="feed-note">{lang==='en'?'Latest video · YouTube':'最新视频 · Bilibili（点击打开）'}</p></div>
+    <section className="show-intro">
+      <div><p className="eyebrow">ORIGINAL PODCAST</p><h2>{lang === 'en' ? 'NiúMǎ Holiday' : '牛马假日'}</h2><p className="show-desc">{lang === 'en' ? 'A podcast documenting the lives, work and small absurdities of ordinary working people.' : '一档记录普通打工人故事的播客。聊工作，也聊生活，以及那些发生在“牛马”与“假日”之间的真实切片。'}</p></div>
+      <div className="show-meta"><span>01 / ONESTAGE ENTERTAINMENT</span><span>{lang === 'en' ? 'AUDIO + VIDEO PODCAST' : '音频 + 视频播客'}</span></div>
     </section>
-    <section className="ratings-row"><span>{lang==='en'?'RATINGS':'评分网站'}</span><a className="rating-card" href={lang==='en'?'https://www.imdb.com/title/tt44772588':'https://www.douban.com/doubanapp/dispatch/movie/38625203'} target="_blank" rel="noreferrer"><span className={`rating-mark ${lang==='en'?'imdb-mark':'douban-mark'}`}>{lang==='en'?'IMDb':'豆瓣'}</span><span className="rating-text">{lang==='en'?'View on IMDb':'查看豆瓣词条'}</span><span className="rating-arrow">↗</span></a></section>
-    <section className="platform-row"><span>{lang==='en'?'ALSO AVAILABLE ON':'同步发布于'}</span><span>{lang==='en'?'Xiaoyuzhou · Himalaya · Apple Podcasts · YouTube · Bilibili':'小宇宙 · 喜马拉雅 · Apple Podcasts · YouTube · Bilibili'}</span></section>
+    <section className="media-layout">
+      <EpisodeList lang={lang} />
+      <div className="video-column">
+        <div className="section-label"><span>{lang === 'en' ? 'LATEST VIDEO' : '最新视频'}</span><span>{lang === 'en' ? 'YOUTUBE' : 'BILIBILI'}</span></div>
+        {lang === 'en' ? <div className="video-embed"><iframe title="NiúMǎ Holiday latest video on YouTube" src={youtubeEmbed} loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen /></div> : <a className="video-link-card" href={bilibiliUrl} target="_blank" rel="noreferrer"><div className="video-link-inner"><span className="video-link-kicker">BILIBILI</span><strong>打开《牛马假日》最新视频</strong><span className="video-link-url">b23.tv/NvH8KU3 ↗</span></div></a>}
+        <p className="feed-note">{lang === 'en' ? 'Latest video · YouTube' : '最新视频 · Bilibili（点击打开）'}</p>
+      </div>
+    </section>
+    <section className="ratings-row"><span>{lang === 'en' ? 'RATINGS' : '评分网站'}</span><a className="rating-card" href={lang === 'en' ? 'https://www.imdb.com/title/tt44772588' : 'https://www.douban.com/doubanapp/dispatch/movie/38625203'} target="_blank" rel="noreferrer"><span className={`rating-mark ${lang === 'en' ? 'imdb-mark' : 'douban-mark'}`}>{lang === 'en' ? 'IMDb' : '豆瓣'}</span><span className="rating-text">{lang === 'en' ? 'View on IMDb' : '查看豆瓣词条'}</span><span className="rating-arrow">↗</span></a></section>
+    <section className="platform-row"><span>{lang === 'en' ? 'ALSO AVAILABLE ON' : '同步发布于'}</span><span>{lang === 'en' ? 'Xiaoyuzhou · Himalaya · Apple Podcasts · YouTube · Bilibili' : '小宇宙 · 喜马拉雅 · Apple Podcasts · YouTube · Bilibili'}</span></section>
   </main>
 }
 
-function App(){
-  const [section,setSection]=useState<Section>('home'); const [menu,setMenu]=useState(false); const [lang,setLang]=useState<Lang>('en'); const [activeCategory,setActiveCategory]=useState<Category|'ALL'>('ALL')
-  const go=(s:Section)=>{setSection(s);setMenu(false);window.scrollTo({top:0,behavior:'smooth'})}; const toggleLang=()=>setLang(lang==='en'?'zh':'en'); const visibleProjects=activeCategory==='ALL'?projects:projects.filter(p=>p.category===activeCategory); const brandSection=(en:string,zh:string)=>lang==='en'?`OneStage ${en}`:`壹阶${zh}`
+function App() {
+  const [section, setSection] = useState<Section>('home')
+  const [menu, setMenu] = useState(false)
+  const [lang, setLang] = useState<Lang>('en')
+  const [activeCategory, setActiveCategory] = useState<Category | 'ALL'>('ALL')
+  const go = (s: Section) => { setSection(s); setMenu(false); window.scrollTo({ top: 0, behavior: 'smooth' }) }
+  const toggleLang = () => setLang(lang === 'en' ? 'zh' : 'en')
+  const visibleProjects = activeCategory === 'ALL' ? projects : projects.filter(p => p.category === activeCategory)
+  const brandSection = (en: string, zh: string) => lang === 'en' ? `OneStage ${en}` : `壹阶${zh}`
+
   return <div className="site">
-    <header className="header"><button className="brand" onClick={()=>go('home')} aria-label="OneStage Studio home"><img src="/one-stage/assets/logo.jpg" alt="OneStage Studio"/></button><nav className={menu?'nav open':'nav'}><button className={section==='design'?'active':''} onClick={()=>go('design')}>{lang==='en'?'Design':'设计'}</button><button className={section==='entertainment'?'active':''} onClick={()=>go('entertainment')}>{lang==='en'?'Entertainment':'娱乐'}</button><button className={section==='cultural'?'active':''} onClick={()=>go('cultural')}>{lang==='en'?'Cultural':'文化'}</button><button onClick={()=>go('about')}>{lang==='en'?'About':'关于'}</button><button onClick={()=>go('contact')}>{lang==='en'?'Contact':'联系'}</button></nav><div className="header-actions"><button className="lang-toggle" onClick={toggleLang}>{lang==='en'?'中':'EN'}</button><button className="menu" onClick={()=>setMenu(!menu)}>{menu?'CLOSE':'MENU'}</button></div></header>
-    {section==='home'&&<main className="home-minimal"><section className="home-panels"><button className="home-panel" onClick={()=>go('design')}><div className="home-image"><img src="/one-stage/assets/shanghai-one-central-park.jpg" alt="OneStage Design"/></div><div className="panel-overlay"><span>01</span><strong>{brandSection('Design','设计')}</strong><em>{lang==='en'?'Landscape Architecture':'景观设计'}</em></div></button><button className="home-panel" onClick={()=>go('entertainment')}><Placeholder className="home-placeholder">{lang==='en'?'ENTERTAINMENT':'娱乐'}<br/>IMAGE PLACEHOLDER</Placeholder><div className="panel-overlay"><span>02</span><strong>{brandSection('Entertainment','娱乐')}</strong><em>{lang==='en'?'Podcast & Video':'播客与影像'}</em></div></button><button className="home-panel" onClick={()=>go('cultural')}><Placeholder className="home-placeholder">{lang==='en'?'CULTURAL':'文化'}<br/>IMAGE PLACEHOLDER</Placeholder><div className="panel-overlay"><span>03</span><strong>{brandSection('Cultural','文化')}</strong><em>{lang==='en'?'Writing & Publishing':'写作与出版'}</em></div></button></section></main>}
-    {section==='design'&&<main className="page"><PageTitle no="01" lang={lang} en="OneStage Design" zh="壹阶设计" descEn="Landscape architecture / Spatial experience / Place making" descZh="景观设计 / 空间体验 / 场所营造"/><div className="category-nav"><button className={activeCategory==='ALL'?'selected':''} onClick={()=>setActiveCategory('ALL')}><span>00</span>{lang==='en'?'All':'全部'}</button>{designCategories.map(c=><button className={activeCategory===c.key?'selected':''} key={c.key} onClick={()=>setActiveCategory(c.key)}><span>{c.n}</span>{lang==='en'?c.en:c.zh}</button>)}</div><div className="project-section-heading"><span>{lang==='en'?'SELECTED PROJECTS':'精选项目'}</span><span>{activeCategory==='ALL'?(lang==='en'?'ALL':'全部'):categoryLabel(activeCategory,lang)}</span></div><div className="project-grid">{visibleProjects.map(p=><article className="project" key={p.n}><ProjectImageCarousel project={p}/><div className="project-info"><span>{p.n}</span><div><h3>{lang==='en'?p.enTitle:p.zhTitle}</h3><p>{categoryLabel(p.category,lang)} · {p.meta}</p></div><span>↗</span></div></article>)}</div>{visibleProjects.length===0&&<div className="empty-category"><span>COMING SOON</span><p>{lang==='en'?'Projects in this category are being prepared.':'该门类的项目资料正在整理中。'}</p></div>}</main>}
-    {section==='entertainment'&&<Entertainment lang={lang}/>} 
-    {section==='cultural'&&<main className="page"><PageTitle no="03" lang={lang} en="OneStage Cultural" zh="壹阶文化" descEn="Writing / Publishing / Independent cultural projects" descZh="写作 / 出版 / 独立文化项目"/><section className="writing-feature"><Placeholder className="writing-image">WRITING<br/>IMAGE PLACEHOLDER</Placeholder><div><p className="eyebrow">WRITING & IDEAS</p><h2>{lang==='en'?'Words are another kind of space.':'文字，是另一种空间。'}</h2><p>{lang==='en'?'Selected writing, published work and ongoing cultural projects.':'收录个人文章、出版作品与持续进行中的文化项目。'}</p></div></section><section className="article-list">{(lang==='en'?['Selected Writing / 01','Selected Writing / 02','Selected Writing / 03','人间有灵 — Long-form Writing Project']:['精选文章 / 01','精选文章 / 02','精选文章 / 03','人间有灵 — 长篇写作计划']).map((x,i)=><div className="article" key={x}><span>0{i+1}</span><h3>{x}</h3><span>↗</span></div>)}</section></main>}
-    {section==='about'&&<main className="page about"><PageTitle no="04" lang={lang} en="About" zh="关于壹阶" descEn="A personal creative practice by Kim King." descZh="金宇辰的个人创作实践。"/><div className="about-grid"><img src="/one-stage/assets/shanghai-one-central-park.jpg" alt="OneStage"/><div><p className="large">{lang==='en'?'OneStage Studio is a personal platform for landscape design, media and cultural practice.':'壹阶是一个围绕景观设计、媒体与文化创作展开的个人平台。'}</p><p>{lang==='en'?'A space to present work, record ideas and connect different creative practices.':'这里不是一份传统意义上的简历，而是一处用来呈现作品、记录思考，并连接不同创作方向的个人空间。'}</p><p>Landscape Architect · Project Manager · Podcaster · Writer</p></div></div></main>}
-    {section==='contact'&&<main className="page contact"><PageTitle no="05" lang={lang} en="Contact" zh="联系" descEn="For projects, collaborations and conversations." descZh="项目合作、创意协作与交流。"/><div className="contact-block"><p className="eyebrow">GET IN TOUCH</p><a className="contact-note" href="mailto:bestyuchenking@aliyun.com">bestyuchenking@aliyun.com</a><p>{lang==='en'?'Shanghai / China':'上海 / 中国'}</p></div></main>}
-    <footer><div className="footer-brand"><img src="/one-stage/assets/logo.jpg" alt="OneStage Studio"/></div><div>{lang==='en'?'DESIGN · ENTERTAINMENT · CULTURAL':'设计 · 娱乐 · 文化'}</div><div>© 2026</div></footer>
+    <header className="header">
+      <button className="brand" onClick={() => go('home')} aria-label="OneStage Studio home"><img src="/one-stage/assets/logo.png" alt="OneStage Studio" /></button>
+      <nav className={menu ? 'nav open' : 'nav'}>
+        <button className={section === 'design' ? 'active' : ''} onClick={() => go('design')}>{lang === 'en' ? 'Design' : '设计'}</button>
+        <button className={section === 'entertainment' ? 'active' : ''} onClick={() => go('entertainment')}>{lang === 'en' ? 'Entertainment' : '娱乐'}</button>
+        <button className={section === 'cultural' ? 'active' : ''} onClick={() => go('cultural')}>{lang === 'en' ? 'Collection' : '集录'}</button>
+        <button onClick={() => go('about')}>{lang === 'en' ? 'About' : '关于'}</button>
+        <button onClick={() => go('contact')}>{lang === 'en' ? 'Contact' : '联系方式'}</button>
+      </nav>
+      <div className="header-actions"><button className="lang-toggle" onClick={toggleLang}>{lang === 'en' ? '中' : 'EN'}</button><button className="menu" onClick={() => setMenu(!menu)}>{menu ? 'CLOSE' : 'MENU'}</button></div>
+    </header>
+
+    {section === 'home' && <main className="home-minimal"><section className="home-panels">
+      <button className="home-panel" onClick={() => go('design')}><div className="home-image"><img src="/one-stage/assets/shanghai-one-central-park.jpg" alt="OneStage Design" /></div><div className="panel-overlay"><span>01</span><strong>{brandSection('Design', '设计')}</strong><em>{lang === 'en' ? 'Landscape Architecture' : '景观设计'}</em></div></button>
+      <button className="home-panel" onClick={() => go('entertainment')}><Placeholder className="home-placeholder">{lang === 'en' ? 'ENTERTAINMENT' : '娱乐'}<br />IMAGE PLACEHOLDER</Placeholder><div className="panel-overlay"><span>02</span><strong>{brandSection('Entertainment', '娱乐')}</strong><em>{lang === 'en' ? 'Podcast & Video' : '播客与影像'}</em></div></button>
+      <button className="home-panel" onClick={() => go('cultural')}><Placeholder className="home-placeholder">{lang === 'en' ? 'COLLECTION' : '集录'}<br />IMAGE PLACEHOLDER</Placeholder><div className="panel-overlay"><span>03</span><strong>{brandSection('Collection', '集录')}</strong><em>{lang === 'en' ? 'Writing & Publishing' : '写作与出版'}</em></div></button>
+    </section></main>}
+
+    {section === 'design' && <main className="page"><PageTitle no="01" lang={lang} en="OneStage Design" zh="壹阶设计" descEn="Landscape architecture / Spatial experience / Place making" descZh="景观设计 / 空间体验 / 场所营造" />
+      <div className="category-nav">{designCategories.map(c => <button className={activeCategory === c.key ? 'selected' : ''} key={c.key} onClick={() => setActiveCategory(c.key)}><span>{c.n}</span>{lang === 'en' ? c.en : c.zh}</button>)}</div>
+      <div className="project-section-heading"><span>{lang === 'en' ? 'SELECTED PROJECTS' : '精选项目'}</span><span>{activeCategory === 'ALL' ? (lang === 'en' ? 'ALL PROJECTS' : '全部项目') : categoryLabel(activeCategory, lang)}</span></div>
+      <div className="project-grid">{visibleProjects.map(p => <article className="project" key={p.id}><ProjectImageCarousel project={p} /><div className="project-info"><div><h3>{lang === 'en' ? p.enTitle : p.zhTitle}</h3><p>{categoryLabel(p.category, lang)} · {p.meta}</p></div><span>↗</span></div></article>)}</div>
+      {visibleProjects.length === 0 && <div className="empty-category"><span>COMING SOON</span><p>{lang === 'en' ? 'Projects in this category are being prepared.' : '该门类的项目资料正在整理中。'}</p></div>}
+    </main>}
+
+    {section === 'entertainment' && <Entertainment lang={lang} />}
+
+    {section === 'cultural' && <main className="page"><PageTitle no="03" lang={lang} en="OneStage Collection" zh="壹阶集录" descEn="Writing / Publishing / Independent cultural projects" descZh="写作 / 出版 / 独立文化项目" /><section className="writing-feature"><Placeholder className="writing-image">COLLECTION<br />IMAGE PLACEHOLDER</Placeholder><div><p className="eyebrow">WRITING & IDEAS</p><h2>{lang === 'en' ? 'Words are another kind of space.' : '文字，是另一种空间。'}</h2><p>{lang === 'en' ? 'Selected writing, published work and ongoing independent projects.' : '收录个人文章、出版作品与持续进行中的独立项目。'}</p></div></section><section className="article-list">{(lang === 'en' ? ['Selected Writing / 01', 'Selected Writing / 02', 'Selected Writing / 03', '人间有灵 — Long-form Writing Project'] : ['精选文章 / 01', '精选文章 / 02', '精选文章 / 03', '人间有灵 — 长篇写作计划']).map((x, i) => <div className="article" key={x}><span>0{i + 1}</span><h3>{x}</h3><span>↗</span></div>)}</section></main>}
+
+    {section === 'about' && <main className="page about"><PageTitle no="04" lang={lang} en="About" zh="关于壹阶" descEn="A personal creative practice by Kim King." descZh="金宇辰的个人创作实践。" /><div className="about-grid"><img src="/one-stage/assets/shanghai-one-central-park.jpg" alt="OneStage" /><div><p className="large">{lang === 'en' ? 'OneStage Studio is a personal platform for landscape design, media and cultural practice.' : '壹阶是一个围绕景观设计、媒体与文化创作展开的个人平台。'}</p><p>{lang === 'en' ? 'A space to present work, record ideas and connect different creative practices.' : '这里不是一份传统意义上的简历，而是一处用来呈现作品、记录思考，并连接不同创作方向的个人空间。'}</p><p>Landscape Architect · Project Manager · Podcaster · Writer</p></div></div></main>}
+
+    {section === 'contact' && <main className="page contact"><PageTitle no="05" lang={lang} en="Contact" zh="联系方式" descEn="For projects, collaborations and conversations." descZh="项目合作、创意协作与交流。" /><div className="contact-block"><p className="eyebrow">GET IN TOUCH</p><a className="contact-note" href="mailto:bestyuchenking@aliyun.com">bestyuchenking@aliyun.com</a><p>{lang === 'en' ? 'Shanghai / China' : '上海 / 中国'}</p></div></main>}
+
+    <footer><div className="footer-brand"><img src="/one-stage/assets/logo.png" alt="OneStage Studio" /></div><div>{lang === 'en' ? 'DESIGN · ENTERTAINMENT · COLLECTION' : '设计 · 娱乐 · 集录'}</div><div>© 2026</div></footer>
   </div>
 }
-function PageTitle({no,lang,en,zh,descEn,descZh}:{no:string;lang:Lang;en:string;zh:string;descEn:string;descZh:string}){return <section className="page-title"><span className="page-no">{no}</span><div><p className="eyebrow">{en.toUpperCase()}</p><h1>{lang==='en'?en:zh}</h1><p>{lang==='en'?descEn:descZh}</p></div></section>}
 
-createRoot(document.getElementById('root')!).render(<React.StrictMode><App/></React.StrictMode>)
+function PageTitle({ no, lang, en, zh, descEn, descZh }: { no: string; lang: Lang; en: string; zh: string; descEn: string; descZh: string }) {
+  return <section className="page-title"><span className="page-no">{no}</span><div><p className="eyebrow">{en.toUpperCase()}</p><h1>{lang === 'en' ? en : zh}</h1><p>{lang === 'en' ? descEn : descZh}</p></div></section>
+}
+
+createRoot(document.getElementById('root')!).render(<React.StrictMode><App /></React.StrictMode>)
