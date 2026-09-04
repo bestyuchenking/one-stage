@@ -1,5 +1,5 @@
 请将作品集选出的图片放入此目录。当前网站代码已配置以下文件名：
-logo.jpg
+logo.png
 shanghai-one-central-park.jpg
 wenzhou-crest-residence.jpg
 huzhou-jade-garden.jpg
