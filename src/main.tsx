@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import './styles.css'
 
@@ -16,16 +16,73 @@ const designCategories: { n: string; key: Category; en: string; zh: string }[] =
 ]
 
 const projects = [
-  { n: '01', enTitle: 'One Central Park', zhTitle: '上海壹号院', category: 'residential' as Category, meta: 'Shanghai · 2024', image: '/one-stage/assets/shanghai-one-central-park.jpg' },
-  { n: '02', enTitle: 'CR Land Crest Residence', zhTitle: '温州华润瑞府', category: 'residential' as Category, meta: 'Wenzhou · 2023', image: '/one-stage/assets/wenzhou-crest-residence.jpg' },
-  { n: '03', enTitle: 'Greentown Majestic Mansion', zhTitle: '湖州绿城锦玉园', category: 'residential' as Category, meta: 'Huzhou · 2020', image: '/one-stage/assets/huzhou-jade-garden.jpg' },
-  { n: '04', enTitle: 'Coast Spring', zhTitle: '平阳郁金香公园', category: 'park' as Category, meta: 'Pingyang · 2018', image: '/one-stage/assets/park.jpg' },
-  { n: '05', enTitle: 'Qidong Delta Hotel', zhTitle: '启东Delta酒店', category: 'hotel' as Category, meta: 'Qidong · 2020', image: '/one-stage/assets/hotel.jpg' },
-  { n: '06', enTitle: 'Shenzhen Bay The Mix City Stage 2 Wave Plaza', zhTitle: '深圳湾万象城二期水幕广场', category: 'commercial' as Category, meta: 'Shenzhen · 2024', image: '/one-stage/assets/wave-plaza.jpg' },
-  { n: '07', enTitle: 'Canaan Villa', zhTitle: '文成嘉南美地', category: 'hotel' as Category, meta: 'Wencheng · 2012–2022', image: '/one-stage/assets/canaan-resort.jpg' },
+  { n: '01', enTitle: 'One Central Park', zhTitle: '上海壹号院', category: 'residential' as Category, meta: 'Shanghai · 2024', fallback: '/one-stage/assets/shanghai-one-central-park.jpg' },
+  { n: '02', enTitle: 'CR Land Crest Residence', zhTitle: '温州华润瑞府', category: 'residential' as Category, meta: 'Wenzhou · 2023', fallback: '/one-stage/assets/wenzhou-crest-residence.jpg' },
+  { n: '03', enTitle: 'Greentown Majestic Mansion', zhTitle: '湖州绿城锦玉园', category: 'residential' as Category, meta: 'Huzhou · 2020', fallback: '/one-stage/assets/huzhou-jade-garden.jpg' },
+  { n: '04', enTitle: 'Coast Spring', zhTitle: '平阳郁金香公园', category: 'park' as Category, meta: 'Pingyang · 2018', fallback: '/one-stage/assets/park.jpg' },
+  { n: '05', enTitle: 'Qidong Delta Hotel', zhTitle: '启东Delta酒店', category: 'hotel' as Category, meta: 'Qidong · 2020', fallback: '/one-stage/assets/hotel.jpg' },
+  { n: '06', enTitle: 'Shenzhen Bay The Mix City Stage 2 Wave Plaza', zhTitle: '深圳湾万象城二期水幕广场', category: 'commercial' as Category, meta: 'Shenzhen · 2024', fallback: '/one-stage/assets/wave-plaza.jpg' },
+  { n: '07', enTitle: 'Canaan Villa', zhTitle: '文成嘉南美地', category: 'hotel' as Category, meta: 'Wencheng · 2012–2022', fallback: '/one-stage/assets/canaan-resort.jpg' },
 ]
 
 const categoryLabel = (key: Category, lang: Lang) => designCategories.find(c => c.key === key)?.[lang === 'en' ? 'en' : 'zh'] ?? key
+
+function ProjectCarousel({ project }: { project: typeof projects[number] }) {
+  const imagePaths = [1, 2, 3, 4].map(i => `/one-stage/assets/project${project.n}_${i}.jpg`)
+  const [index, setIndex] = useState(0)
+  const [failed, setFailed] = useState<number[]>([])
+  const [hovered, setHovered] = useState(false)
+  const touchStartX = useRef<number | null>(null)
+
+  const available = imagePaths.map((src, i) => ({ src, i })).filter(x => !failed.includes(x.i))
+  const usingFallback = available.length === 0
+  const displayImages = usingFallback ? [{ src: project.fallback, i: -1 }] : available
+  const safeIndex = Math.min(index, displayImages.length - 1)
+
+  useEffect(() => {
+    if (!hovered || displayImages.length < 2) return
+    const timer = window.setInterval(() => setIndex(current => (current + 1) % displayImages.length), 1800)
+    return () => window.clearInterval(timer)
+  }, [hovered, displayImages.length])
+
+  useEffect(() => {
+    if (index >= displayImages.length) setIndex(0)
+  }, [index, displayImages.length])
+
+  const next = () => setIndex(i => (i + 1) % displayImages.length)
+  const prev = () => setIndex(i => (i - 1 + displayImages.length) % displayImages.length)
+
+  return <div
+    className="project-carousel"
+    onMouseEnter={() => setHovered(true)}
+    onMouseLeave={() => setHovered(false)}
+    onTouchStart={e => { touchStartX.current = e.touches[0].clientX }}
+    onTouchEnd={e => {
+      if (touchStartX.current === null || displayImages.length < 2) return
+      const delta = e.changedTouches[0].clientX - touchStartX.current
+      if (Math.abs(delta) > 45) delta < 0 ? next() : prev()
+      touchStartX.current = null
+    }}
+  >
+    <div className="project-carousel-frame">
+      <img
+        key={displayImages[safeIndex].src}
+        src={displayImages[safeIndex].src}
+        alt=""
+        loading="lazy"
+        onError={() => {
+          if (displayImages[safeIndex].i >= 0) setFailed(list => [...new Set([...list, displayImages[safeIndex].i])])
+        }}
+      />
+      {displayImages.length > 1 && <>
+        <button className="carousel-arrow prev" onClick={prev} aria-label="Previous image">←</button>
+        <button className="carousel-arrow next" onClick={next} aria-label="Next image">→</button>
+        <div className="carousel-count">{String(safeIndex + 1).padStart(2, '0')} / {String(displayImages.length).padStart(2, '0')}</div>
+        <div className="carousel-dots">{displayImages.map((_, i) => <span key={i} className={i === safeIndex ? 'active' : ''} />)}</div>
+      </>}
+    </div>
+  </div>
+}
 
 function ProjectImage({ src, className = '' }: { src?: string; className?: string }) {
   if (!src) return <div className={`placeholder ${className}`}><span>IMAGE<br/>PLACEHOLDER</span></div>
@@ -87,7 +144,7 @@ function App() {
       <div id="design-projects" className="project-section-heading"><span>{lang === 'en' ? 'SELECTED PROJECTS' : '精选项目'}</span><span>{activeCategory === 'ALL' ? (lang === 'en' ? 'ALL' : '全部') : categoryLabel(activeCategory, lang)}</span></div>
       <div className="project-grid">
         {visibleProjects.map(p => <article className="project" key={p.n}>
-          <ProjectImage src={p.image} className={`p${p.n}`}/>
+          <ProjectCarousel project={p} />
           <div className="project-info"><span>{p.n}</span><div><h3>{lang === 'en' ? p.enTitle : p.zhTitle}</h3><p>{categoryLabel(p.category, lang)} · {p.meta}</p></div><span>↗</span></div>
         </article>)}
       </div>
