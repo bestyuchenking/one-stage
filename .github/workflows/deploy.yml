@@ -39,34 +39,24 @@ jobs:
             python3 - "$TMP_XML" <<'PY'
           import json, sys, xml.etree.ElementTree as ET
           from pathlib import Path
-
           xml_path = Path(sys.argv[1])
           root = ET.parse(xml_path).getroot()
-
           def child(el, name):
               for item in list(el):
-                  if item.tag.rsplit('}', 1)[-1] == name:
-                      return item
+                  if item.tag.rsplit('}', 1)[-1] == name: return item
               return None
-
           def text(el, name):
               node = child(el, name)
               return (node.text or '').strip() if node is not None else ''
-
           episodes = []
           channel = child(root, 'channel')
           if channel is not None:
               for item in channel:
-                  if item.tag.rsplit('}', 1)[-1] != 'item':
-                      continue
-                  title = text(item, 'title')
-                  enclosure = child(item, 'enclosure')
+                  if item.tag.rsplit('}', 1)[-1] != 'item': continue
+                  title = text(item, 'title'); enclosure = child(item, 'enclosure')
                   audio_url = enclosure.attrib.get('url', '').strip() if enclosure is not None else ''
-                  duration = text(item, 'duration')
-                  pub_date = text(item, 'pubDate')
-                  if title and audio_url:
-                      episodes.append({'title': title, 'audioUrl': audio_url, 'pubDate': pub_date, 'duration': duration})
-
+                  duration = text(item, 'duration'); pub_date = text(item, 'pubDate')
+                  if title and audio_url: episodes.append({'title':title,'audioUrl':audio_url,'pubDate':pub_date,'duration':duration})
           Path('public/episodes.json').write_text(json.dumps(episodes, ensure_ascii=False, indent=2), encoding='utf-8')
           print(f'Generated {len(episodes)} podcast episodes')
           PY
@@ -93,11 +83,10 @@ jobs:
           bvid = sys.argv[1]
           path = Path('src/main.tsx')
           text = path.read_text(encoding='utf-8')
-          pattern = r": <a className=\"video-link-card\" href=\{bilibiliUrl\}.*?</a>"
+          pattern = r":\s*<a className=\"video-link-card\" href=\{bilibiliUrl\}.*?</a>"
           replacement = ': <div className="video-embed"><iframe title="牛马假日 latest video on Bilibili" src="https://player.bilibili.com/player.html?bvid=' + bvid + '&autoplay=0&danmaku=0" loading="lazy" allowFullScreen /></div>'
           new_text, count = re.subn(pattern, replacement, text, count=1, flags=re.S)
-          if count != 1:
-              raise SystemExit('Could not find the Bilibili link card in src/main.tsx')
+          if count != 1: raise SystemExit('Could not find the Bilibili link card in src/main.tsx')
           path.write_text(new_text, encoding='utf-8')
           PY
       - name: Build
