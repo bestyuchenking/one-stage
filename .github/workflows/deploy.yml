@@ -26,6 +26,45 @@ jobs:
           node-version: 22
       - name: Install dependencies
         run: npm install
+      - name: Resolve Bilibili short link for embedded player
+        shell: bash
+        run: |
+          set -euo pipefail
+          SHORT_URL='https://b23.tv/NvH8KU3'
+          FINAL_URL=$(curl -L -sS --max-time 30 -o /dev/null -w '%{url_effective}' "$SHORT_URL" || true)
+          BVID=$(printf '%s' "$FINAL_URL" | grep -oE 'BV[0-9A-Za-z]+' | head -n 1 || true)
+          if [ -z "$BVID" ]; then
+            echo "Could not resolve a Bilibili BV id from $SHORT_URL"
+            echo "Resolved URL: $FINAL_URL"
+            exit 1
+          fi
+          echo "Resolved Bilibili video: $BVID"
+          python3 - "$BVID" <<'PY'
+          import re, sys
+          from pathlib import Path
+
+          bvid = sys.argv[1]
+          path = Path('src/main.tsx')
+          text = path.read_text(encoding='utf-8')
+
+          pattern = r": <a className=\"video-link-card\" href=\{bilibiliUrl\}.*?</a>"
+          replacement = (
+              ': <div className="video-embed">'
+              f'<iframe title="牛马假日 latest video on Bilibili" '
+              f'src="https://player.bilibili.com/player.html?bvid={bvid}&autoplay=0&danmaku=0" '
+              'loading="lazy" allowFullScreen />'
+              '</div>'
+          )
+          new_text, count = re.subn(pattern, replacement, text, count=1, flags=re.S)
+          if count != 1:
+              raise SystemExit('Could not find the Bilibili link card in src/main.tsx')
+          path.write_text(new_text, encoding='utf-8')
+
+          css = Path('src/styles.css')
+          css_text = css.read_text(encoding='utf-8')
+          if '.video-embed{' not in css_text:
+              css.write_text(css_text + '\n.video-embed{aspect-ratio:16/9;background:#000}.video-embed iframe{width:100%;height:100%;display:block;border:0}\n', encoding='utf-8')
+          PY
       - name: Build
         run: npm run build
       - name: Upload artifact
