@@ -4,6 +4,8 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  schedule:
+    - cron: '17 3 * * *'
 
 permissions:
   contents: read
@@ -26,6 +28,57 @@ jobs:
           node-version: 22
       - name: Install dependencies
         run: npm install
+      - name: Fetch podcast RSS and generate episode data
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p public
+          FEED_URL='https://feed.xyzfm.space/r6r6p7dccgbw'
+          TMP_XML=$(mktemp)
+          if curl -fL --retry 3 --retry-delay 2 --max-time 60 -sS "$FEED_URL" -o "$TMP_XML"; then
+            python3 - "$TMP_XML" <<'PY'
+          import json, sys, xml.etree.ElementTree as ET
+          from pathlib import Path
+
+          xml_path = Path(sys.argv[1])
+          root = ET.parse(xml_path).getroot()
+
+          def child(el, name):
+              for item in list(el):
+                  if item.tag.rsplit('}', 1)[-1] == name:
+                      return item
+              return None
+
+          def text(el, name):
+              node = child(el, name)
+              return (node.text or '').strip() if node is not None else ''
+
+          episodes = []
+          channel = child(root, 'channel')
+          if channel is not None:
+              for item in channel:
+                  if item.tag.rsplit('}', 1)[-1] != 'item':
+                      continue
+                  title = text(item, 'title')
+                  enclosure = child(item, 'enclosure')
+                  audio_url = enclosure.attrib.get('url', '').strip() if enclosure is not None else ''
+                  duration = text(item, 'duration')
+                  pub_date = text(item, 'pubDate')
+                  if title and audio_url:
+                      episodes.append({
+                          'title': title,
+                          'audioUrl': audio_url,
+                          'pubDate': pub_date,
+                          'duration': duration,
+                      })
+
+          Path('public/episodes.json').write_text(json.dumps(episodes, ensure_ascii=False, indent=2), encoding='utf-8')
+          print(f'Generated {len(episodes)} podcast episodes')
+          PY
+          else
+            echo 'RSS fetch failed; keeping the last generated public/episodes.json.'
+          fi
+          rm -f "$TMP_XML"
       - name: Resolve Bilibili short link for embedded player
         shell: bash
         run: |
@@ -59,11 +112,30 @@ jobs:
           if count != 1:
               raise SystemExit('Could not find the Bilibili link card in src/main.tsx')
           path.write_text(new_text, encoding='utf-8')
+          PY
+      - name: Inject custom podcast episode browser
+        shell: bash
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+
+          main = Path('src/main.tsx')
+          text = main.read_text(encoding='utf-8')
+          if "import EpisodeList from './EpisodeList'" not in text:
+              text = text.replace("import './styles.css'", "import './styles.css'\nimport EpisodeList from './EpisodeList'")
+
+          old = '''<div className="audio-column"><div className="section-label"><span>{lang==='en'?'ALL EPISODES':'全部节目'}</span><span>RSS</span></div><div className="rss-player"><iframe title={lang==='en'?'NiúMǎ Holiday all episodes':'牛马假日全部节目'} src="https://play.prx.org/e?uf=https%3A%2F%2Ffeed.xyzfm.space%2Fr6r6p7dccgbw&sp=all&th=light" loading="lazy"/></div><p className="feed-note">{lang==='en'?'Select any episode to listen.':'可直接选择任意一期收听。'}</p></div>'''
+          new = '''<EpisodeList lang={lang}/>'''
+          if old not in text:
+              raise SystemExit('Could not find the existing audio player block in src/main.tsx')
+          text = text.replace(old, new, 1)
+          main.write_text(text, encoding='utf-8')
 
           css = Path('src/styles.css')
           css_text = css.read_text(encoding='utf-8')
-          if '.video-embed{' not in css_text:
-              css.write_text(css_text + '\n.video-embed{aspect-ratio:16/9;background:#000}.video-embed iframe{width:100%;height:100%;display:block;border:0}\n', encoding='utf-8')
+          if '.episode-browser{' not in css_text:
+              css_text += '''\n.episode-browser{width:100%}.episode-feature{border:1px solid #d5d5d0;background:#fff;margin-bottom:1px}.episode-feature-top{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid #e2e2de;font:9px 'DM Mono',monospace;letter-spacing:.08em;color:#777}.episode-feature-number{color:#111}.episode-feature-main{width:100%;display:grid;grid-template-columns:88px 1fr;gap:22px;align-items:center;text-align:left;padding:25px 22px 20px}.episode-feature-play{width:68px;height:68px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#111;color:#fff}.episode-feature-play .episode-play-icon{font-size:20px}.episode-feature-copy{min-width:0;display:flex;flex-direction:column;gap:12px}.episode-feature-copy strong{font-size:clamp(20px,2.2vw,32px);font-weight:400;line-height:1.15;letter-spacing:-.025em}.episode-feature-copy>span{font:9px 'DM Mono',monospace;letter-spacing:.08em;color:#777}.episode-progress{height:3px;margin:0 22px 18px;background:#e7e7e2;overflow:hidden}.episode-progress span{display:block;height:100%;background:#111;transition:width .1s linear}.episode-list{border-top:1px solid #111}.episode-row{width:100%;display:grid;grid-template-columns:42px 1fr auto;gap:14px;align-items:center;text-align:left;border-bottom:1px solid #ddd;padding:18px 10px 18px 16px;background:#fff;transition:background .15s ease}.episode-row:hover,.episode-row.playing{background:#f0f0ed}.episode-row-play{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#111;color:#fff}.episode-row-play .episode-play-icon{font-size:9px}.episode-play-icon.pause{font-size:11px;letter-spacing:-2px}.episode-row-title{font-size:14px;line-height:1.55;letter-spacing:-.01em}.episode-row-meta{font:9px 'DM Mono',monospace;color:#777;white-space:nowrap}.episode-more{display:block;margin:24px auto 0;padding:14px 24px;background:#3b3b3b;color:#fff;font-size:11px;letter-spacing:.04em;text-transform:uppercase}.episode-more:hover{background:#111}.episode-empty{border:1px solid #d5d5d0;padding:30px;font:10px 'DM Mono',monospace;color:#777}\n@media(max-width:700px){.episode-feature-main{grid-template-columns:64px 1fr;gap:15px;padding:22px 16px 17px}.episode-feature-play{width:54px;height:54px}.episode-feature-play .episode-play-icon{font-size:16px}.episode-feature-copy strong{font-size:18px}.episode-row{grid-template-columns:34px 1fr;gap:10px;padding:16px 6px 16px 10px}.episode-row-meta{display:none}.episode-row-title{font-size:13px;line-height:1.55}.episode-row-play{width:27px;height:27px}.episode-more{margin-top:20px;width:100%}}\n'''
+              css.write_text(css_text, encoding='utf-8')
           PY
       - name: Build
         run: npm run build
