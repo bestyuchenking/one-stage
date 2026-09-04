@@ -41,6 +41,7 @@ function App() {
   const go = (s: Section) => { setSection(s); setMenu(false); window.scrollTo({ top: 0, behavior: 'smooth' }) }
   const toggleLang = () => setLang(lang === 'en' ? 'zh' : 'en')
   const visibleProjects = activeCategory === 'ALL' ? projects : projects.filter(p => p.category === activeCategory)
+  const brandSection = (en: string, zh: string) => lang === 'en' ? `OneStage ${en}` : `壹阶${zh}`
 
   return <div className="site">
     <header className="header">
@@ -64,15 +65,15 @@ function App() {
       <section className="home-panels">
         <button className="home-panel" onClick={() => go('design')}>
           <ProjectImage src="/one-stage/assets/shanghai-one-central-park.jpg" />
-          <div className="panel-overlay"><span>01</span><strong>OneStage {lang === 'en' ? 'Design' : '设计'}</strong><em>{lang === 'en' ? 'Landscape Architecture' : '景观设计'}</em></div>
+          <div className="panel-overlay"><span>01</span><strong>{brandSection('Design', '设计')}</strong><em>{lang === 'en' ? 'Landscape Architecture' : '景观设计'}</em></div>
         </button>
         <button className="home-panel" onClick={() => go('entertainment')}>
           <div className="placeholder home-placeholder"><span>{lang === 'en' ? 'ENTERTAINMENT' : '娱乐'}<br/>IMAGE PLACEHOLDER</span></div>
-          <div className="panel-overlay"><span>02</span><strong>OneStage {lang === 'en' ? 'Entertainment' : '娱乐'}</strong><em>{lang === 'en' ? 'Podcast & Video' : '播客与影像'}</em></div>
+          <div className="panel-overlay"><span>02</span><strong>{brandSection('Entertainment', '娱乐')}</strong><em>{lang === 'en' ? 'Podcast & Video' : '播客与影像'}</em></div>
         </button>
         <button className="home-panel" onClick={() => go('cultural')}>
           <div className="placeholder home-placeholder"><span>{lang === 'en' ? 'CULTURAL' : '文化'}<br/>IMAGE PLACEHOLDER</span></div>
-          <div className="panel-overlay"><span>03</span><strong>OneStage {lang === 'en' ? 'Cultural' : '文化'}</strong><em>{lang === 'en' ? 'Writing & Publishing' : '写作与出版'}</em></div>
+          <div className="panel-overlay"><span>03</span><strong>{brandSection('Cultural', '文化')}</strong><em>{lang === 'en' ? 'Writing & Publishing' : '写作与出版'}</em></div>
         </button>
       </section>
     </main>}
