@@ -28,6 +28,34 @@ jobs:
           node-version: 22
       - name: Install dependencies
         run: npm install
+      - name: Optimize project images and generate manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save sharp@0.34.3
+          node <<'NODE'
+          const fs = require('fs')
+          const path = require('path')
+          const sharp = require('sharp')
+          const dir = path.join(process.cwd(), 'public', 'assets')
+          const files = fs.readdirSync(dir).filter(f => /^project\d+_\d+\.jpe?g$/i.test(f))
+          const grouped = {}
+          const jobs = files.map(async file => {
+            const match = file.match(/^project(\d+)_(\d+)\.jpe?g$/i)
+            const id = match[1]
+            const out = file.replace(/\.jpe?g$/i, '.webp')
+            await sharp(path.join(dir, file))
+              .resize({ width: 2200, withoutEnlargement: true })
+              .webp({ quality: 84, effort: 5 })
+              .toFile(path.join(dir, out))
+            ;(grouped[id] ||= []).push(`/one-stage/assets/${out}`)
+          })
+          Promise.all(jobs).then(() => {
+            for (const id of Object.keys(grouped)) grouped[id].sort((a,b) => Number(a.match(/_(\d+)\.webp$/)[1]) - Number(b.match(/_(\d+)\.webp$/)[1]))
+            fs.writeFileSync(path.join(process.cwd(), 'public', 'project-images.json'), JSON.stringify(grouped, null, 2))
+            console.log(`Optimized ${files.length} project images into WebP`)
+          }).catch(err => { console.error(err); process.exit(1) })
+          NODE
       - name: Fetch podcast RSS and generate episode data
         shell: bash
         run: |
