@@ -1,21 +1,17 @@
 name: Deploy OneStage Studio
-
 on:
   push:
     branches: [main]
   workflow_dispatch:
   schedule:
     - cron: '17 3 * * *'
-
 permissions:
   contents: read
   pages: write
   id-token: write
-
 concurrency:
   group: pages
   cancel-in-progress: true
-
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -28,33 +24,33 @@ jobs:
           node-version: 22
       - name: Install dependencies
         run: npm install
-      - name: Optimize project images and generate manifest
+      - name: Optimize images and generate project manifest
         shell: bash
         run: |
           set -euo pipefail
           npm install --no-save sharp@0.34.3
           node <<'NODE'
-          const fs = require('fs')
-          const path = require('path')
-          const sharp = require('sharp')
-          const dir = path.join(process.cwd(), 'public', 'assets')
-          const files = fs.readdirSync(dir).filter(f => /^project\d+_\d+\.jpe?g$/i.test(f))
-          const grouped = {}
-          const jobs = files.map(async file => {
-            const match = file.match(/^project(\d+)_(\d+)\.jpe?g$/i)
-            const id = match[1]
-            const out = file.replace(/\.jpe?g$/i, '.webp')
-            await sharp(path.join(dir, file))
-              .resize({ width: 2200, withoutEnlargement: true })
-              .webp({ quality: 84, effort: 5 })
-              .toFile(path.join(dir, out))
-            ;(grouped[id] ||= []).push(`/one-stage/assets/${out}`)
-          })
-          Promise.all(jobs).then(() => {
-            for (const id of Object.keys(grouped)) grouped[id].sort((a,b) => Number(a.match(/_(\d+)\.webp$/)[1]) - Number(b.match(/_(\d+)\.webp$/)[1]))
-            fs.writeFileSync(path.join(process.cwd(), 'public', 'project-images.json'), JSON.stringify(grouped, null, 2))
-            console.log(`Optimized ${files.length} project images into WebP`)
-          }).catch(err => { console.error(err); process.exit(1) })
+          const fs=require('fs'),path=require('path'),sharp=require('sharp')
+          const dir=path.join(process.cwd(),'public','assets')
+          const files=fs.readdirSync(dir)
+          const projectFiles=files.filter(f=>/^project\d+_\d+\.jpe?g$/i.test(f))
+          const homeFiles=files.filter(f=>/^home-(entertainment|collection)\.jpe?g$/i.test(f))
+          const collectionFiles=files.filter(f=>/^duku-2401-cover\.jpe?g$/i.test(f))
+          const grouped={}
+          const jobs=[]
+          for(const file of projectFiles){
+            const m=file.match(/^project(\d+)_\d+\.jpe?g$/i),id=m[1],out=file.replace(/\.jpe?g$/i,'.webp')
+            jobs.push(sharp(path.join(dir,file)).resize({width:2200,withoutEnlargement:true}).webp({quality:84,effort:5}).toFile(path.join(dir,out)).then(()=>{(grouped[id]??=[]).push(`/one-stage/assets/${out}`)}))
+          }
+          for(const file of [...homeFiles,...collectionFiles]){
+            const out=file.replace(/\.jpe?g$/i,'.webp')
+            jobs.push(sharp(path.join(dir,file)).resize({width:2200,withoutEnlargement:true}).webp({quality:84,effort:5}).toFile(path.join(dir,out)))
+          }
+          Promise.all(jobs).then(()=>{
+            for(const id of Object.keys(grouped)) grouped[id].sort((a,b)=>Number(a.match(/_(\d+)\.webp$/)[1])-Number(b.match(/_(\d+)\.webp$/)[1]))
+            fs.writeFileSync(path.join(process.cwd(),'public','project-images.json'),JSON.stringify(grouped,null,2))
+            console.log(`Optimized ${jobs.length} images; ${projectFiles.length} project images indexed`)
+          }).catch(err=>{console.error(err);process.exit(1)})
           NODE
       - name: Fetch podcast RSS and generate episode data
         shell: bash
@@ -65,27 +61,21 @@ jobs:
           TMP_XML=$(mktemp)
           if curl -fL --retry 3 --retry-delay 2 --max-time 60 -sS "$FEED_URL" -o "$TMP_XML"; then
             python3 - "$TMP_XML" <<'PY'
-          import json, sys, xml.etree.ElementTree as ET
+          import json,sys,xml.etree.ElementTree as ET
           from pathlib import Path
-          xml_path = Path(sys.argv[1])
-          root = ET.parse(xml_path).getroot()
-          def child(el, name):
+          root=ET.parse(Path(sys.argv[1])).getroot()
+          def child(el,name):
               for item in list(el):
-                  if item.tag.rsplit('}', 1)[-1] == name: return item
-              return None
-          def text(el, name):
-              node = child(el, name)
-              return (node.text or '').strip() if node is not None else ''
-          episodes = []
-          channel = child(root, 'channel')
+                  if item.tag.rsplit('}',1)[-1]==name:return item
+          def text(el,name):
+              node=child(el,name);return (node.text or '').strip() if node is not None else ''
+          episodes=[];channel=child(root,'channel')
           if channel is not None:
               for item in channel:
-                  if item.tag.rsplit('}', 1)[-1] != 'item': continue
-                  title = text(item, 'title'); enclosure = child(item, 'enclosure')
-                  audio_url = enclosure.attrib.get('url', '').strip() if enclosure is not None else ''
-                  duration = text(item, 'duration'); pub_date = text(item, 'pubDate')
-                  if title and audio_url: episodes.append({'title':title,'audioUrl':audio_url,'pubDate':pub_date,'duration':duration})
-          Path('public/episodes.json').write_text(json.dumps(episodes, ensure_ascii=False, indent=2), encoding='utf-8')
+                  if item.tag.rsplit('}',1)[-1]!='item':continue
+                  title=text(item,'title');enclosure=child(item,'enclosure');audio_url=enclosure.attrib.get('url','').strip() if enclosure is not None else ''
+                  if title and audio_url:episodes.append({'title':title,'audioUrl':audio_url,'pubDate':text(item,'pubDate'),'duration':text(item,'duration')})
+          Path('public/episodes.json').write_text(json.dumps(episodes,ensure_ascii=False,indent=2),encoding='utf-8')
           print(f'Generated {len(episodes)} podcast episodes')
           PY
           else
@@ -99,23 +89,16 @@ jobs:
           SHORT_URL='https://b23.tv/NvH8KU3'
           FINAL_URL=$(curl -L -sS --max-time 30 -o /dev/null -w '%{url_effective}' "$SHORT_URL" || true)
           BVID=$(printf '%s' "$FINAL_URL" | grep -oE 'BV[0-9A-Za-z]+' | head -n 1 || true)
-          if [ -z "$BVID" ]; then
-            echo "Could not resolve a Bilibili BV id from $SHORT_URL"
-            echo "Resolved URL: $FINAL_URL"
-            exit 1
-          fi
-          echo "Resolved Bilibili video: $BVID"
+          if [ -z "$BVID" ]; then echo "Could not resolve a Bilibili BV id from $SHORT_URL"; exit 1; fi
           python3 - "$BVID" <<'PY'
-          import re, sys
+          import re,sys
           from pathlib import Path
-          bvid = sys.argv[1]
-          path = Path('src/main.tsx')
-          text = path.read_text(encoding='utf-8')
-          pattern = r":\s*<a className=\"video-link-card\" href=\{bilibiliUrl\}.*?</a>"
-          replacement = ': <div className="video-embed"><iframe title="牛马假日 latest video on Bilibili" src="https://player.bilibili.com/player.html?bvid=' + bvid + '&autoplay=0&danmaku=0" loading="lazy" allowFullScreen /></div>'
-          new_text, count = re.subn(pattern, replacement, text, count=1, flags=re.S)
-          if count != 1: raise SystemExit('Could not find the Bilibili link card in src/main.tsx')
-          path.write_text(new_text, encoding='utf-8')
+          bvid=sys.argv[1];path=Path('src/main.tsx');text=path.read_text(encoding='utf-8')
+          pattern=r":\s*<a className=\"video-link-card\" href=\{bilibiliUrl\}.*?</a>"
+          replacement=': <div className="video-embed"><iframe title="牛马假日 latest video on Bilibili" src="https://player.bilibili.com/player.html?bvid='+bvid+'&autoplay=0&danmaku=0" loading="lazy" allowFullScreen /></div>'
+          new_text,count=re.subn(pattern,replacement,text,count=1,flags=re.S)
+          if count!=1:raise SystemExit('Could not find the Bilibili link card in src/main.tsx')
+          path.write_text(new_text,encoding='utf-8')
           PY
       - name: Build
         run: npm run build
@@ -123,7 +106,6 @@ jobs:
         uses: actions/upload-pages-artifact@v4
         with:
           path: ./dist
-
   deploy:
     environment:
       name: github-pages
