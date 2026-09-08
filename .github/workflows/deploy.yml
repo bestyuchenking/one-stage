@@ -82,23 +82,37 @@ jobs:
             echo 'RSS fetch failed; keeping the last generated public/episodes.json.'
           fi
           rm -f "$TMP_XML"
-      - name: Resolve Bilibili short link for embedded player
+      - name: Fetch latest YouTube and Bilibili video data
         shell: bash
         run: |
           set -euo pipefail
-          SHORT_URL='https://b23.tv/NvH8KU3'
-          FINAL_URL=$(curl -L -sS --max-time 30 -o /dev/null -w '%{url_effective}' "$SHORT_URL" || true)
-          BVID=$(printf '%s' "$FINAL_URL" | grep -oE 'BV[0-9A-Za-z]+' | head -n 1 || true)
-          if [ -z "$BVID" ]; then echo "Could not resolve a Bilibili BV id from $SHORT_URL"; exit 1; fi
-          python3 - "$BVID" <<'PY'
-          import re,sys
+          YOUTUBE_VIDEO_ID='v9qaddGKum8'
+          CHANNEL_PAGE='https://www.youtube.com/@NiumaHoliday'
+          CHANNEL_HTML=$(curl -L -sS --max-time 30 -A 'Mozilla/5.0' "$CHANNEL_PAGE" || true)
+          CHANNEL_ID=$(printf '%s' "$CHANNEL_HTML" | grep -oE '"channelId":"UC[0-9A-Za-z_-]+' | head -n 1 | cut -d'"' -f3 || true)
+          if [ -n "$CHANNEL_ID" ]; then
+            YT_XML=$(mktemp)
+            if curl -fL --retry 2 --max-time 30 -sS "https://www.youtube.com/feeds/videos.xml?channel_id=${CHANNEL_ID}" -o "$YT_XML"; then
+              LATEST=$(python3 - "$YT_XML" <<'PY'
+          import sys,xml.etree.ElementTree as ET
+          root=ET.parse(sys.argv[1]).getroot()
+          for entry in root:
+              if entry.tag.rsplit('}',1)[-1]=='entry':
+                  for node in entry:
+                      if node.tag.rsplit('}',1)[-1]=='videoId' and node.text:
+                          print(node.text.strip());raise SystemExit
+          PY
+              )
+              if [ -n "$LATEST" ]; then YOUTUBE_VIDEO_ID="$LATEST"; fi
+            fi
+            rm -f "$YT_XML"
+          fi
+          python3 - "$YOUTUBE_VIDEO_ID" <<'PY'
+          import json,sys
           from pathlib import Path
-          bvid=sys.argv[1];path=Path('src/main.tsx');text=path.read_text(encoding='utf-8')
-          pattern=r":\s*<a className=\"video-link-card\" href=\{bilibiliUrl\}.*?</a>"
-          replacement=': <div className="video-embed"><iframe title="牛马假日 latest video on Bilibili" src="https://player.bilibili.com/player.html?bvid='+bvid+'&autoplay=0&danmaku=0" loading="lazy" allowFullScreen /></div>'
-          new_text,count=re.subn(pattern,replacement,text,count=1,flags=re.S)
-          if count!=1:raise SystemExit('Could not find the Bilibili link card in src/main.tsx')
-          path.write_text(new_text,encoding='utf-8')
+          data={'youtubeVideoId':sys.argv[1],'bilibiliBvid':'BV18nbE6kE18'}
+          Path('public/video-data.json').write_text(json.dumps(data,ensure_ascii=False,indent=2),encoding='utf-8')
+          print('Video data:',data)
           PY
       - name: Build
         run: npm run build
