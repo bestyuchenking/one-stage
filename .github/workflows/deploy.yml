@@ -131,18 +131,18 @@ jobs:
           from pathlib import Path
           albums=[
             {'id':'385484900','title':'牛马假日','tracks':[
-              {'id':'3402287900','name':'Track 01'},
-              {'id':'3420685296','name':'Track 02'},
-              {'id':'3429730036','name':'Track 03'}
+              {'id':'3402287900','name':'牛马假日 - 雨尘'},
+              {'id':'3420685296','name':'西北的地球online - 雨尘'},
+              {'id':'3429730036','name':'我们的1半1半 - 雨尘'}
             ]},
             {'id':'385484965','title':'池塘里的那片海','tracks':[
-              {'id':'3402290178','name':'Track 01'},
-              {'id':'3402297696','name':'Track 02'},
-              {'id':'3402299031','name':'Track 03'}
+              {'id':'3402290178','name':'池海回响 - 雨尘'},
+              {'id':'3402297696','name':'Homeward Lights - 雨尘'},
+              {'id':'3402299031','name':'Childhood Lanterns - 雨尘'}
             ]}
           ]
           Path('public/music-data.json').write_text(json.dumps({'albums':albums},ensure_ascii=False,indent=2),encoding='utf-8')
-          print('NetEase track data generated from supplied song IDs: 6 tracks')
+          print('NetEase track data generated from supplied song IDs and titles: 6 tracks')
           PY
       - name: Build
         run: npm run build
