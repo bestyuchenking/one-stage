@@ -122,59 +122,27 @@ jobs:
           Path('public/video-data.json').write_text(json.dumps(data,ensure_ascii=False,indent=2),encoding='utf-8')
           print('Video data:',data)
           PY
-      - name: Fetch NetEase album track data
+      - name: Generate NetEase Cloud Music track data
         shell: bash
         run: |
           set -euo pipefail
           python3 <<'PY'
-          import html,json,re,urllib.parse,urllib.request
+          import json
           from pathlib import Path
-          albums=[('385484900','牛马假日'),('385484965','池塘里的那片海')]
-          headers={'User-Agent':'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/131 Safari/537.36','Referer':'https://music.163.com/','Accept-Language':'zh-CN,zh;q=0.9,en;q=0.8'}
-
-          def get(url):
-              req=urllib.request.Request(url,headers=headers)
-              with urllib.request.urlopen(req,timeout=25) as r:
-                  return r.read().decode('utf-8','replace')
-
-          def tracks_from_json(data):
-              if not isinstance(data,dict): return []
-              candidates=[]
-              album=data.get('album')
-              if isinstance(album,dict): candidates=album.get('songs') or []
-              if not candidates: candidates=data.get('songs') or []
-              if not candidates and isinstance(data.get('result'),dict): candidates=data['result'].get('songs') or []
-              return [{'id':str(s.get('id')),'name':s.get('name','')} for s in candidates if isinstance(s,dict) and s.get('id')]
-
-          def tracks_from_album_html(text):
-              m=re.search(r'<textarea[^>]+id=["\']song-list-pre-data["\'][^>]*>([\s\S]*?)</textarea>',text,re.I)
-              if not m: return []
-              raw=html.unescape(m.group(1)).strip()
-              try: songs=json.loads(raw)
-              except Exception: return []
-              return [{'id':str(s.get('id')),'name':s.get('name','')} for s in songs if isinstance(s,dict) and s.get('id')]
-
-          result=[]
-          for album_id,title in albums:
-              tracks=[]
-              for url in [
-                  f'https://music.163.com/api/album/{album_id}',
-                  f'https://music.163.com/api/album/{album_id}?ext=true&id={album_id}&offset=0&total=true&limit=100',
-                  f'https://music.163.com/api/album/detail?id={album_id}'
-              ]:
-                  try:
-                      tracks=tracks_from_json(json.loads(get(url)))
-                      if tracks:
-                          print(f'NetEase album {album_id}: {len(tracks)} tracks from API');break
-                  except Exception as e: print(f'NetEase API fallback for {album_id}: {e}')
-              if not tracks:
-                  try:
-                      page=get(f'https://music.163.com/album?id={album_id}')
-                      tracks=tracks_from_album_html(page)
-                      print(f'NetEase album {album_id}: {len(tracks)} tracks from song-list-pre-data')
-                  except Exception as e: print(f'NetEase album HTML fallback for {album_id}: {e}')
-              result.append({'id':album_id,'title':title,'tracks':tracks})
-          Path('public/music-data.json').write_text(json.dumps({'albums':result},ensure_ascii=False,indent=2),encoding='utf-8')
+          albums=[
+            {'id':'385484900','title':'牛马假日','tracks':[
+              {'id':'3402287900','name':'Track 01'},
+              {'id':'3420685296','name':'Track 02'},
+              {'id':'3429730036','name':'Track 03'}
+            ]},
+            {'id':'385484965','title':'池塘里的那片海','tracks':[
+              {'id':'3402290178','name':'Track 01'},
+              {'id':'3402297696','name':'Track 02'},
+              {'id':'3402299031','name':'Track 03'}
+            ]}
+          ]
+          Path('public/music-data.json').write_text(json.dumps({'albums':albums},ensure_ascii=False,indent=2),encoding='utf-8')
+          print('NetEase track data generated from supplied song IDs: 6 tracks')
           PY
       - name: Build
         run: npm run build
