@@ -8,7 +8,7 @@ const stylesPath = `${root}/src/styles.css`
 const assetsPath = `${root}/public/assets`
 
 // Generate a cache-busting manifest from the actual JPG source files.
-// The JPG can be replaced in GitHub without requiring any React source change.
+// Replacing a JPG in public/assets will therefore produce a new URL automatically.
 const homeManifest = {}
 for (const name of ['home-collection.jpg', 'home-entertainment.jpg']) {
   const file = `${assetsPath}/${name}`
@@ -28,7 +28,7 @@ const appStatePatched = "const [section,setSection]=useState<Section>('home'),[m
 if (main.includes(appState)) main = main.replace(appState, appStatePatched)
 
 const imageEffect = "useEffect(()=>{fetch(`${import.meta.env.BASE_URL}project-images.json`,{cache:'no-store'}).then(r=>r.ok?r.json():Promise.reject(new Error(`HTTP ${r.status}`))).then(data=>setImageMap(data&&typeof data==='object'?data:{})).catch(()=>setImageMap({}))},[])"
-const imageEffectPatched = `${imageEffect}\n  useEffect(()=>{fetch(`${'${'}import.meta.env.BASE_URL}home-assets.json`,{cache:'no-store'}).then(r=>r.ok?r.json():Promise.reject(new Error(`HTTP ${'${'}r.status}`))).then(data=>setHomeAssets(data&&typeof data==='object'?data:{})).catch(()=>{})},[])\n  useEffect(()=>{\n    let cancelled=false\n    const controller=new AbortController()\n    const timer=setTimeout(()=>controller.abort(),3000)\n    fetch('https://ipapi.co/country/',{signal:controller.signal,cache:'no-store'})\n      .then(r=>r.ok?r.text():'')\n      .then(country=>{if(!cancelled)setLang(country.trim().toUpperCase()==='CN'?'zh':'en')})\n      .catch(()=>{if(!cancelled)setLang(navigator.language.toLowerCase().startsWith('zh')?'zh':'en')})\n      .finally(()=>clearTimeout(timer))\n    return()=>{cancelled=true;controller.abort();clearTimeout(timer)}\n  },[])`
+const imageEffectPatched = `${imageEffect}\n  useEffect(()=>{fetch(import.meta.env.BASE_URL+'home-assets.json',{cache:'no-store'}).then(r=>r.ok?r.json():Promise.reject(new Error('HTTP '+r.status))).then(data=>setHomeAssets(data&&typeof data==='object'?data:{})).catch(()=>{})},[])\n  useEffect(()=>{\n    let cancelled=false\n    const controller=new AbortController()\n    const timer=setTimeout(()=>controller.abort(),3000)\n    fetch('https://ipapi.co/country/',{signal:controller.signal,cache:'no-store'})\n      .then(r=>r.ok?r.text():'')\n      .then(country=>{if(!cancelled)setLang(country.trim().toUpperCase()==='CN'?'zh':'en')})\n      .catch(()=>{if(!cancelled)setLang(navigator.language.toLowerCase().startsWith('zh')?'zh':'en')})\n      .finally(()=>clearTimeout(timer))\n    return()=>{cancelled=true;controller.abort();clearTimeout(timer)}\n  },[])`
 if (main.includes(imageEffect)) main = main.replace(imageEffect, imageEffectPatched)
 
 const oldToggle = "<button className=\"lang-toggle\" onClick={toggleLang}>{lang==='en'?'中':'EN'}</button>"
