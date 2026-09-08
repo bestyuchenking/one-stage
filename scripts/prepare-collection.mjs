@@ -6,14 +6,13 @@ fs.mkdirSync(publicDir,{recursive:true})
 const sources={
   film:[['https://movie.douban.com/review/9709291','《网络迷踪》中蕴含的魔鬼细节'],['https://movie.douban.com/review/12640989','《捍卫雅各布》不窥全貌，不予置评'],['https://movie.douban.com/review/17101161','《漫威丧尸》带大家回顾一下前作'],['https://movie.douban.com/review/12059697','《利刃出鞘》上映在即，凭记忆电影彩蛋全解析'],['https://movie.douban.com/review/10568087','《难以置信》恶魔在人间，幸好还有天使守护'],['https://movie.douban.com/review/10513148','《抹去重来》脑洞观众的穿越指南'],['https://movie.douban.com/review/10205386','《Ghosts》里都是什么鬼？'],['https://movie.douban.com/review/10138459','《复仇者联盟4：终局之战》时间理论解析']],
   answer:[
-    ['https://www.zhihu.com/question/268447608/answer/341457341','绿化草坪为什么不用韭菜？','周刊收录 2018 年度 300 问 | 新知：人类七分熟','weekly'],
+    ['https://www.zhihu.com/question/268447608/answer/341457341','绿化草坪为什么不用韭菜？','周刊收录 · 2018 年度 300 问 | 新知：人类七分熟 · 知乎日报收录','weekly'],
     ['https://www.zhihu.com/question/321494449/answer/665771371','如何解读《复仇者联盟 4》涉及到的时间悖论？','圆桌收录：再见初代复联','roundtable'],
     ['https://www.zhihu.com/question/319189226/answer/912885307','为什么裸子植物普遍长得很直？','2019 科学季 / 圆桌收录：让植物说话 | 非常想问','roundtable'],
-    ['https://www.zhihu.com/question/268447608/answer/341457341','绿化草坪为什么不用韭菜？','知乎日报收录','daily'],
-    ['https://www.zhihu.com/question/58732650/answer/159030771','如何看待 27 岁设计师加班到凌晨猝死？','知乎日报收录','daily'],
-    ['https://www.zhihu.com/question/36028568/answer/65633702','《死亡笔记》中 L 的推理究竟是有理有据的逻辑分析，还是凭直觉的开脑洞？','知乎日报收录','daily'],
+    ['https://www.zhihu.com/question/58732650/answer/159030771','如何看待 27 岁设计师加班到凌晨猝死？','知乎日报收录 · 编辑推荐','daily'],
+    ['https://www.zhihu.com/question/36028568/answer/65633702','《死亡笔记》中 L 的推理究竟是有理有据的逻辑分析，还是凭直觉的开脑洞？','知乎日报收录 · 编辑推荐','daily'],
     ['https://www.zhihu.com/question/35738932/answer/65178529','从《天龙八部》到《鹿鼎记》，为什么金庸小说中的武林高手越来越弱？','知乎日报收录','daily'],
-    ['https://www.zhihu.com/question/30658907/answer/48932601','观看话剧演出为什么不能拍照摄影？','知乎日报收录','daily'],
+    ['https://www.zhihu.com/question/30658907/answer/48932601','观看话剧演出为什么不能拍照摄影？','知乎日报收录 · 编辑推荐','daily'],
     ['https://www.zhihu.com/question/301604051/answer/530284319','地产景观设计和市政景观设计的区别是什么？','编辑推荐','editorial'],
     ['https://www.zhihu.com/question/38518059/answer/77050144','如何看待雨水园以及设计中水资源的可持续利用与发展？','编辑推荐','editorial'],
     ['https://www.zhihu.com/question/31516346/answer/52358745','一个话剧剧组或者音乐剧组每到一个地方巡演，需要准备些什么东西？','编辑推荐','editorial'],
