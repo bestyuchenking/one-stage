@@ -1,9 +1,25 @@
 import fs from 'node:fs'
+import crypto from 'node:crypto'
 
 const root = process.cwd()
 const mainPath = `${root}/src/main.tsx`
 const collectionPath = `${root}/src/Collection.tsx`
 const stylesPath = `${root}/src/styles.css`
+const assetsPath = `${root}/public/assets`
+
+// Generate a cache-busting manifest from the actual JPG source files.
+// The JPG can be replaced in GitHub without requiring any React source change.
+const homeManifest = {}
+for (const name of ['home-collection.jpg', 'home-entertainment.jpg']) {
+  const file = `${assetsPath}/${name}`
+  if (fs.existsSync(file)) {
+    const hash = crypto.createHash('sha1').update(fs.readFileSync(file)).digest('hex').slice(0, 12)
+    const key = name.replace(/^home-/, '').replace(/\.jpg$/i, '')
+    homeManifest[key] = `/one-stage/assets/${name.replace(/\.jpg$/i, '.webp')}?v=${hash}`
+  }
+}
+fs.mkdirSync(`${root}/public`, { recursive: true })
+fs.writeFileSync(`${root}/public/home-assets.json`, JSON.stringify(homeManifest, null, 2))
 
 let main = fs.readFileSync(mainPath, 'utf8')
 
@@ -20,8 +36,7 @@ const newToggle = "<div className=\"language-switcher\"><button className=\"lang
 if (main.includes(oldToggle)) main = main.replace(oldToggle, newToggle)
 main = main.replace(",toggleLang=()=>setLang(lang==='en'?'zh':'en'),visibleProjects", ",visibleProjects")
 
-// Use content-hashed WebP filenames generated from the uploaded JPGs.
-// This prevents GitHub Pages/CDN from serving an older image when a source JPG is replaced.
+// Homepage images are resolved through the generated cache-busting manifest.
 const oldHomeCollection = '<img src="/one-stage/assets/home-collection.webp" alt="OneStage Collection" loading="eager" decoding="async"/>'
 const newHomeCollection = '<img src={homeAssets.collection||`${import.meta.env.BASE_URL}assets/home-collection.webp`} alt="OneStage Collection" loading="eager" decoding="async"/>'
 if (main.includes(oldHomeCollection)) main = main.replace(oldHomeCollection, newHomeCollection)
@@ -41,4 +56,4 @@ let styles = fs.readFileSync(stylesPath, 'utf8')
 styles += `\n\n/* Language selector */\n.language-switcher{position:relative;display:flex;align-items:center}.lang-toggle{width:30px;height:30px;padding:0;border:0;background:transparent;color:inherit;display:grid;place-items:center;font-size:17px;line-height:1;cursor:pointer}.language-menu{position:absolute;top:calc(100% + 10px);right:0;min-width:108px;padding:6px;background:rgba(245,245,242,.98);border:1px solid #ccc;box-shadow:0 8px 24px rgba(0,0,0,.08);z-index:1000}.language-menu button{display:block;width:100%;padding:9px 11px;border:0;background:transparent;text-align:left;font:10px 'DM Mono',monospace;letter-spacing:.04em;cursor:pointer;color:#111}.language-menu button:hover,.language-menu button.selected{background:#e7e7e3}.language-menu button.selected{font-weight:600}@media(max-width:700px){.language-menu{right:-4px;min-width:100px}}\n`
 fs.writeFileSync(stylesPath, styles)
 
-console.log('Patched IP-based language default, language dropdown, bilingual Collection title, and cache-safe homepage image manifest.')
+console.log('Patched IP-based language default, language dropdown, bilingual Collection title, and automatic cache-safe homepage image replacement.')
