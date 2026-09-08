@@ -4,31 +4,46 @@ const root=process.cwd(), mainPath=`${root}/src/main.tsx`, collectionPath=`${roo
 fs.mkdirSync(publicDir,{recursive:true})
 
 const sources={
-  film:[['https://movie.douban.com/review/9709291','《网络迷踪》中蕴含的魔鬼细节'],['https://movie.douban.com/review/12640989','《捍卫雅各布》不窥全貌，不予置评'],['https://movie.douban.com/review/17101161','《漫威丧尸》带大家回顾一下前作'],['https://movie.douban.com/review/12059697','《利刃出鞘》上映在即，凭记忆电影彩蛋全解析'],['https://movie.douban.com/review/10568087','《难以置信》恶魔在人间，幸好还有天使守护'],['https://movie.douban.com/review/10513148','《抹去重来》脑洞观众的穿越指南'],['https://movie.douban.com/review/10205386','《Ghosts》里都是什么鬼？'],['https://movie.douban.com/review/10138459','《复仇者联盟4：终局之战》时间理论解析']],
+  film:[
+    ['https://movie.douban.com/review/9709291','《网络迷踪》中蕴含的魔鬼细节','The Devilish Details Hidden in Searching'],
+    ['https://movie.douban.com/review/12640989','《捍卫雅各布》不窥全貌，不予置评','Don’t Judge Without Seeing the Whole Picture: Defending Jacob'],
+    ['https://movie.douban.com/review/17101161','《漫威丧尸》带大家回顾一下前作','Marvel Zombies: A Look Back at the Previous Installments'],
+    ['https://movie.douban.com/review/12059697','《利刃出鞘》上映在即，凭记忆电影彩蛋全解析','Knives Out Is Coming: A Complete Analysis of the Film’s Easter Eggs from Memory'],
+    ['https://movie.douban.com/review/10568087','《难以置信》恶魔在人间，幸好还有天使守护','Unbelievable: Demons Among Us, Thankfully Angels Still Protect Us'],
+    ['https://movie.douban.com/review/10513148','《抹去重来》脑洞观众的穿越指南','Undone: A Time-Travel Guide for Brainy Viewers'],
+    ['https://movie.douban.com/review/10205386','《Ghosts》里都是什么鬼？','What Kind of Ghosts Are in Ghosts?'],
+    ['https://movie.douban.com/review/10138459','《复仇者联盟4：终局之战》时间理论解析','Avengers: Endgame — An Analysis of Its Time Theory']
+  ],
   answer:[
-    ['https://www.zhihu.com/question/268447608/answer/341457341','绿化草坪为什么不用韭菜？','周刊收录 · 2018 年度 300 问 | 新知：人类七分熟 · 知乎日报收录','weekly'],
-    ['https://www.zhihu.com/question/321494449/answer/665771371','如何解读《复仇者联盟 4》涉及到的时间悖论？','圆桌收录：再见初代复联','roundtable'],
-    ['https://www.zhihu.com/question/319189226/answer/912885307','为什么裸子植物普遍长得很直？','2019 科学季 / 圆桌收录：让植物说话 | 非常想问','roundtable'],
-    ['https://www.zhihu.com/question/58732650/answer/159030771','如何看待 27 岁设计师加班到凌晨猝死？','知乎日报收录 · 编辑推荐','daily'],
-    ['https://www.zhihu.com/question/36028568/answer/65633702','《死亡笔记》中 L 的推理究竟是有理有据的逻辑分析，还是凭直觉的开脑洞？','知乎日报收录 · 编辑推荐','daily'],
-    ['https://www.zhihu.com/question/35738932/answer/65178529','从《天龙八部》到《鹿鼎记》，为什么金庸小说中的武林高手越来越弱？','知乎日报收录','daily'],
-    ['https://www.zhihu.com/question/30658907/answer/48932601','观看话剧演出为什么不能拍照摄影？','知乎日报收录 · 编辑推荐','daily'],
-    ['https://www.zhihu.com/question/301604051/answer/530284319','地产景观设计和市政景观设计的区别是什么？','编辑推荐','editorial'],
-    ['https://www.zhihu.com/question/38518059/answer/77050144','如何看待雨水园以及设计中水资源的可持续利用与发展？','编辑推荐','editorial'],
-    ['https://www.zhihu.com/question/31516346/answer/52358745','一个话剧剧组或者音乐剧组每到一个地方巡演，需要准备些什么东西？','编辑推荐','editorial'],
-    ['https://www.zhihu.com/question/27208590/answer/51915274','看《歌剧魅影》最合适的座位在哪儿？','编辑推荐','editorial']
+    ['https://www.zhihu.com/question/268447608/answer/341457341','绿化草坪为什么不用韭菜？','Why Don’t We Use Chives for Lawn Grass?','周刊收录 · 2018 年度 300 问 | 新知：人类七分熟 · 知乎日报收录','weekly'],
+    ['https://www.zhihu.com/question/321494449/answer/665771371','如何解读《复仇者联盟 4》涉及到的时间悖论？','How Should We Understand the Time Paradox in Avengers: Endgame?','圆桌收录：再见初代复联','roundtable'],
+    ['https://www.zhihu.com/question/319189226/answer/912885307','为什么裸子植物普遍长得很直？','Why Are Gymnosperms Generally So Straight?','2019 科学季 / 圆桌收录：让植物说话 | 非常想问','roundtable'],
+    ['https://www.zhihu.com/question/58732650/answer/159030771','如何看待 27 岁设计师加班到凌晨猝死？','What Do You Think About the Death of a 27-Year-Old Designer After Working Overtime Until Late at Night?','知乎日报收录 · 编辑推荐','daily'],
+    ['https://www.zhihu.com/question/36028568/answer/65633702','《死亡笔记》中 L 的推理究竟是有理有据的逻辑分析，还是凭直觉的开脑洞？','Is L’s Reasoning in Death Note Logical Analysis or Intuitive Guesswork?','知乎日报收录 · 编辑推荐','daily'],
+    ['https://www.zhihu.com/question/35738932/answer/65178529','从《天龙八部》到《鹿鼎记》，为什么金庸小说中的武林高手越来越弱？','Why Do Martial Arts Masters Become Weaker from Demi-Gods and Semi-Devils to The Deer and the Cauldron?','知乎日报收录','daily'],
+    ['https://www.zhihu.com/question/30658907/answer/48932601','观看话剧演出为什么不能拍照摄影？','Why Are Photography and Filming Not Allowed During Stage Performances?','知乎日报收录 · 编辑推荐','daily'],
+    ['https://www.zhihu.com/question/301604051/answer/530284319','地产景观设计和市政景观设计的区别是什么？','What Is the Difference Between Real Estate Landscape Design and Municipal Landscape Design?','编辑推荐','editorial'],
+    ['https://www.zhihu.com/question/38518059/answer/77050144','如何看待雨水园以及设计中水资源的可持续利用与发展？','How Should We Understand Rain Gardens and the Sustainable Use of Water Resources in Design?','编辑推荐','editorial'],
+    ['https://www.zhihu.com/question/31516346/answer/52358745','一个话剧剧组或者音乐剧组每到一个地方巡演，需要准备些什么东西？','What Does a Theatre or Musical Company Need to Prepare When Touring to Different Places?','编辑推荐','editorial'],
+    ['https://www.zhihu.com/question/27208590/answer/51915274','看《歌剧魅影》最合适的座位在哪儿？','Where Is the Best Seat for Watching The Phantom of the Opera?','编辑推荐','editorial']
   ]
 }
 function cleanTitle(raw=''){return raw.replace(/\s+/g,' ').trim().replace(/\s*[|｜]\s*(知乎|豆瓣电影|豆瓣)\s*$/i,'').replace(/\s*-\s*(知乎|豆瓣电影|豆瓣)\s*$/i,'').replace(/^知乎[：:]\s*/,'').trim()}
 async function fetchTitle(url,fallback){try{const res=await fetch(url,{headers:{'user-agent':'Mozilla/5.0 (compatible; OneStageBot/1.0)','accept-language':'zh-CN,zh;q=0.9,en;q=0.8'},signal:AbortSignal.timeout(10000)});const html=await res.text();const og=html.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i)?.[1]||html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:title["'][^>]*>/i)?.[1];const title=html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1];return cleanTitle(og||title||fallback)||fallback}catch{return fallback}}
-async function translate(text){if(!text)return '';try{const res=await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=zh-CN|en`,{signal:AbortSignal.timeout(8000)});const data=await res.json();const out=data?.responseData?.translatedText;if(out&&!/MYMEMORY WARNING/i.test(out))return out.replace(/\s+/g,' ').trim()}catch{}return text}
-const film=await Promise.all(sources.film.map(async([href,fallback])=>{const zh=await fetchTitle(href,fallback);return {zh,en:await translate(zh),href,meta:'Douban · Film Review'}}))
-const answers=await Promise.all(sources.answer.map(async([href,zh,recognition,category])=>({zh,en:await translate(zh),href,recognition,category})))
+const film=await Promise.all(sources.film.map(async([href,zh,en])=>({zh,en,href,meta:'Douban · Film Review'})))
+const answers=await Promise.all(sources.answer.map(async([href,zh,en,recognition,category])=>({zh,en,href,recognition,category})))
 fs.writeFileSync(`${publicDir}/collection-metadata.json`,JSON.stringify({film,answers},null,2))
 
 let collection=fs.readFileSync(collectionPath,'utf8')
 const collectionData=`const filmReviews=${JSON.stringify(film)}\nconst answers=${JSON.stringify(answers)}\n`
 collection=collection.replace(/const filmReviews=\[[\s\S]*?\n\]\nconst answers=\[[\s\S]*?\n\]\n/,collectionData)
+const oldCollectionStart=collection.indexOf("    {active==='film'&&")
+const oldCollectionEnd=collection.indexOf("  </main>",oldCollectionStart)
+if(oldCollectionStart<0||oldCollectionEnd<0)throw new Error('Collection section markers not found')
+const collectionSections=`    {active==='film'&&<section className="collection-section collection-tab-content"><div className="collection-section-head"><span>01</span><div><h3>{lang==='en'?'FILM & TELEVISION':'影视评论'}</h3><p>{lang==='en'?'Reviews, details & observations':'影视评论、细节考据与观察'}</p></div></div><div className="collection-archive-list">{filmReviews.map(x=><a className="collection-row" href={x.href} target="_blank" rel="noreferrer" key={x.href}><div><p className="collection-row-type">{x.meta}</p><h4>{lang==='en'?x.en:x.zh}</h4></div><span className="collection-row-arrow">↗</span></a>)}</div></section>}
+    {active==='answers'&&<section className="collection-section collection-tab-content"><div className="collection-section-head"><span>02</span><div><h3>{lang==='en'?'ANSWERS':'知乎回答'}</h3><p>{lang==='en'?'Selected public knowledge writing':'精选知乎回答与知识型写作'}</p></div></div><div className="answer-stats"><div><strong>20K+</strong><span>{lang==='en'?'FOLLOWERS':'关注者'}</span></div><div><strong>11</strong><span>{lang==='en'?'SELECTED WORKS':'入选作品'}</span></div><div><strong>2018</strong><span>{lang==='en'?'ZH DAILY / 300 QUESTIONS':'知乎日报 / 300问'}</span></div></div><div className="collection-archive-list">{answers.map(x=><a className="collection-row answer-row" href={x.href} target="_blank" rel="noreferrer" key={x.href}><div><p className="collection-row-type">Zhihu · Answer</p><h4>{lang==='en'?x.en:x.zh}</h4>{x.recognition&&<div className="collection-row-recognition">{x.recognition}</div>}</div><span className="collection-row-arrow">↗</span></a>)}</div><div className="collection-archive-note">{lang==='en'?'11 answers have been selected for Zhihu editorial features, roundtables, Zhihu Weekly and Zhihu Daily.':'共有11个回答进入知乎编辑精选、知乎圆桌、知乎周刊和知乎日报等栏目。'}</div></section>}
+`
+collection=collection.slice(0,oldCollectionStart)+collectionSections+collection.slice(oldCollectionEnd)
 fs.writeFileSync(collectionPath,collection)
 
 let main=fs.readFileSync(mainPath,'utf8')
