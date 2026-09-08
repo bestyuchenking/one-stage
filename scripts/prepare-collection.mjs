@@ -4,25 +4,38 @@ const root=process.cwd(), mainPath=`${root}/src/main.tsx`, collectionPath=`${roo
 fs.mkdirSync(publicDir,{recursive:true})
 
 const sources={
-  film:[['https://movie.douban.com/review/9709291','《网络谜踪》中蕴含的魔鬼细节'],['https://movie.douban.com/review/12640989/',''],['https://movie.douban.com/review/17101161/',''],['https://movie.douban.com/review/12059697/',''],['https://movie.douban.com/review/10568087/',''],['https://movie.douban.com/review/10513148/',''],['https://movie.douban.com/review/10205386/',''],['https://movie.douban.com/review/10138459/','']],
-  answer:[['https://www.zhihu.com/question/321494449/answer/665771371','绿化草坪为什么不用韭菜'],['https://www.zhihu.com/question/319189226/answer/912885307',''],['https://www.zhihu.com/question/301604051/answer/530284319',''],['https://www.zhihu.com/question/268447608/answer/341457341',''],['https://www.zhihu.com/question/58732650/answer/159030771',''],['https://www.zhihu.com/question/38518059/answer/77050144',''],['https://www.zhihu.com/question/36028568/answer/65633702',''],['https://www.zhihu.com/question/35738932/answer/65178529',''],['https://www.zhihu.com/question/31516346/answer/52358745',''],['https://www.zhihu.com/question/27208590/answer/51915274',''],['https://www.zhihu.com/question/30658907/answer/48932601','']]
+  film:[['https://movie.douban.com/review/9709291','《网络迷踪》中蕴含的魔鬼细节'],['https://movie.douban.com/review/12640989','《捍卫雅各布》不窥全貌，不予置评'],['https://movie.douban.com/review/17101161','《漫威丧尸》带大家回顾一下前作'],['https://movie.douban.com/review/12059697','《利刃出鞘》上映在即，凭记忆电影彩蛋全解析'],['https://movie.douban.com/review/10568087','《难以置信》恶魔在人间，幸好还有天使守护'],['https://movie.douban.com/review/10513148','《抹去重来》脑洞观众的穿越指南'],['https://movie.douban.com/review/10205386','《Ghosts》里都是什么鬼？'],['https://movie.douban.com/review/10138459','《复仇者联盟4：终局之战》时间理论解析']],
+  answer:[
+    ['https://www.zhihu.com/question/268447608/answer/341457341','绿化草坪为什么不用韭菜？','周刊收录 2018 年度 300 问 | 新知：人类七分熟','weekly'],
+    ['https://www.zhihu.com/question/321494449/answer/665771371','如何解读《复仇者联盟 4》涉及到的时间悖论？','圆桌收录：再见初代复联','roundtable'],
+    ['https://www.zhihu.com/question/319189226/answer/912885307','为什么裸子植物普遍长得很直？','2019 科学季 / 圆桌收录：让植物说话 | 非常想问','roundtable'],
+    ['https://www.zhihu.com/question/268447608/answer/341457341','绿化草坪为什么不用韭菜？','知乎日报收录','daily'],
+    ['https://www.zhihu.com/question/58732650/answer/159030771','如何看待 27 岁设计师加班到凌晨猝死？','知乎日报收录','daily'],
+    ['https://www.zhihu.com/question/36028568/answer/65633702','《死亡笔记》中 L 的推理究竟是有理有据的逻辑分析，还是凭直觉的开脑洞？','知乎日报收录','daily'],
+    ['https://www.zhihu.com/question/35738932/answer/65178529','从《天龙八部》到《鹿鼎记》，为什么金庸小说中的武林高手越来越弱？','知乎日报收录','daily'],
+    ['https://www.zhihu.com/question/30658907/answer/48932601','观看话剧演出为什么不能拍照摄影？','知乎日报收录','daily'],
+    ['https://www.zhihu.com/question/301604051/answer/530284319','地产景观设计和市政景观设计的区别是什么？','编辑推荐','editorial'],
+    ['https://www.zhihu.com/question/38518059/answer/77050144','如何看待雨水园以及设计中水资源的可持续利用与发展？','编辑推荐','editorial'],
+    ['https://www.zhihu.com/question/31516346/answer/52358745','一个话剧剧组或者音乐剧组每到一个地方巡演，需要准备些什么东西？','编辑推荐','editorial'],
+    ['https://www.zhihu.com/question/27208590/answer/51915274','看《歌剧魅影》最合适的座位在哪儿？','编辑推荐','editorial']
+  ]
 }
 function cleanTitle(raw=''){return raw.replace(/\s+/g,' ').trim().replace(/\s*[|｜]\s*(知乎|豆瓣电影|豆瓣)\s*$/i,'').replace(/\s*-\s*(知乎|豆瓣电影|豆瓣)\s*$/i,'').replace(/^知乎[：:]\s*/,'').trim()}
-async function fetchTitle(url,fallback){try{const res=await fetch(url,{headers:{'user-agent':'Mozilla/5.0 (compatible; OneStageBot/1.0)','accept-language':'zh-CN,zh;q=0.9,en;q=0.8'},signal:AbortSignal.timeout(10000)});const html=await res.text();const og=html.match(/<meta[^>]+property=[\"']og:title[\"'][^>]+content=[\"']([^\"']+)[\"']/i)?.[1]||html.match(/<meta[^>]+content=[\"']([^\"']+)[\"'][^>]+property=[\"']og:title[\"'][^>]*>/i)?.[1];const title=html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1];return cleanTitle(og||title||fallback)||fallback}catch{return fallback}}
+async function fetchTitle(url,fallback){try{const res=await fetch(url,{headers:{'user-agent':'Mozilla/5.0 (compatible; OneStageBot/1.0)','accept-language':'zh-CN,zh;q=0.9,en;q=0.8'},signal:AbortSignal.timeout(10000)});const html=await res.text();const og=html.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i)?.[1]||html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:title["'][^>]*>/i)?.[1];const title=html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1];return cleanTitle(og||title||fallback)||fallback}catch{return fallback}}
 async function translate(text){if(!text)return '';try{const res=await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=zh-CN|en`,{signal:AbortSignal.timeout(8000)});const data=await res.json();const out=data?.responseData?.translatedText;if(out&&!/MYMEMORY WARNING/i.test(out))return out.replace(/\s+/g,' ').trim()}catch{}return text}
-const buildMeta=async items=>Promise.all(items.map(async([href,fallback])=>{const zh=await fetchTitle(href,fallback);return {zh,en:await translate(zh),href}}))
-const [film,answers]=await Promise.all([buildMeta(sources.film),buildMeta(sources.answer)])
+const film=await Promise.all(sources.film.map(async([href,fallback])=>{const zh=await fetchTitle(href,fallback);return {zh,en:await translate(zh),href,meta:'Douban · Film Review'}}))
+const answers=await Promise.all(sources.answer.map(async([href,zh,recognition,category])=>({zh,en:await translate(zh),href,recognition,category})))
 fs.writeFileSync(`${publicDir}/collection-metadata.json`,JSON.stringify({film,answers},null,2))
 
 let collection=fs.readFileSync(collectionPath,'utf8')
-collection=collection.replace(/const filmReviews=\[[\s\S]*?\n\]\nconst answers=\[[\s\S]*?\n\]\n/,`const filmReviews=${JSON.stringify(film)}\nconst answers=${JSON.stringify(answers)}\n`)
+const collectionData=`const filmReviews=${JSON.stringify(film)}\nconst answers=${JSON.stringify(answers)}\n`
+collection=collection.replace(/const filmReviews=\[[\s\S]*?\n\]\nconst answers=\[[\s\S]*?\n\]\n/,collectionData)
 fs.writeFileSync(collectionPath,collection)
 
 let main=fs.readFileSync(mainPath,'utf8')
 if(!main.includes("import './music.css'"))main=main.replace("import './styles.css'","import './styles.css'\nimport './music.css'")
 const start=main.indexOf('function Entertainment({lang}:{lang:Lang}){'),end=main.indexOf('\nfunction App(){',start)
 if(start<0||end<0)throw new Error('Entertainment function markers not found')
-
 const entertainment=`function Entertainment({lang}:{lang:Lang}){
   const [active,setActive]=useState<'podcast'|'music'|'video'>('podcast')
   const [video,setVideo]=useState({youtubeVideoId:'v9qaddGKum8',bilibiliBvid:'BV18nbE6kE18'})
@@ -40,4 +53,4 @@ const entertainment=`function Entertainment({lang}:{lang:Lang}){
 `
 main=main.slice(0,start)+entertainment+main.slice(end)
 fs.writeFileSync(mainPath,main)
-console.log(`Prepared ${film.length} film reviews + ${answers.length} Zhihu answers and 2 music albums`)
+console.log(`Prepared ${film.length} film reviews + ${answers.length} Zhihu entries and 2 music albums`)
