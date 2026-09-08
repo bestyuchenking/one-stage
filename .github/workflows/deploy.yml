@@ -127,22 +127,69 @@ jobs:
         run: |
           set -euo pipefail
           python3 <<'PY'
-          import json,urllib.request,urllib.parse
+          import html,json,re,urllib.request,urllib.parse
           from pathlib import Path
           albums=[('385484900','牛马假日'),('385484965','池塘里的那片海')]
+          headers={'User-Agent':'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/131 Safari/537.36','Referer':'https://music.163.com/','Accept-Language':'zh-CN,zh;q=0.9,en;q=0.8'}
+
+          def get(url):
+              req=urllib.request.Request(url,headers=headers)
+              with urllib.request.urlopen(req,timeout=25) as r:
+                  return r.read().decode('utf-8','replace')
+
+          def tracks_from_json(data):
+              if not isinstance(data,dict): return []
+              candidates=[]
+              album=data.get('album')
+              if isinstance(album,dict): candidates=album.get('songs') or []
+              if not candidates:
+                  candidates=data.get('songs') or data.get('result',{}).get('songs',[]) if isinstance(data.get('result',{}),dict) else []
+              return [{'id':str(s.get('id')),'name':s.get('name','')} for s in candidates if isinstance(s,dict) and s.get('id')]
+
+          def tracks_from_html(text):
+              found=[]
+              seen=set()
+              patterns=[
+                  r'href=["\'](?:https?:)?//music\.163\.com/#/song\?id=(\d+)["\'][^>]*>(.*?)</a>',
+                  r'href=["\']/song\?id=(\d+)["\'][^>]*>(.*?)</a>',
+                  r'"id":(\d+),"name":"([^"\\]*(?:\\.[^"\\]*)*)"'
+              ]
+              for pat in patterns:
+                  for m in re.finditer(pat,text,re.S|re.I):
+                      sid=m.group(1)
+                      if sid in seen: continue
+                      name=re.sub(r'<[^>]+>','',m.group(2))
+                      name=html.unescape(name).strip()
+                      try: name=json.loads('"'+name+'"')
+                      except Exception: pass
+                      if name:
+                          seen.add(sid);found.append({'id':sid,'name':name})
+              return found
+
           result=[]
           for album_id,title in albums:
-              url='https://music.163.com/api/album/detail?id='+urllib.parse.quote(album_id)
-              req=urllib.request.Request(url,headers={'User-Agent':'Mozilla/5.0','Referer':'https://music.163.com/'})
               tracks=[]
-              try:
-                  with urllib.request.urlopen(req,timeout=20) as r:
-                      data=json.load(r)
-                  songs=data.get('album',{}).get('songs',[]) or []
-                  tracks=[{'id':str(s.get('id')),'name':s.get('name','')} for s in songs if s.get('id')]
-                  print(f'NetEase album {album_id}: {len(tracks)} tracks')
-              except Exception as e:
-                  print(f'NetEase album {album_id} fetch failed: {e}')
+              endpoints=[
+                  f'https://music.163.com/api/album/{album_id}',
+                  f'https://music.163.com/api/album/{album_id}?ext=true&id={album_id}&offset=0&total=true&limit=100',
+                  f'https://music.163.com/api/album/detail?id={album_id}'
+              ]
+              for url in endpoints:
+                  try:
+                      data=json.loads(get(url))
+                      tracks=tracks_from_json(data)
+                      if tracks:
+                          print(f'NetEase album {album_id}: {len(tracks)} tracks from API')
+                          break
+                  except Exception as e:
+                      print(f'NetEase API fallback for {album_id}: {e}')
+              if not tracks:
+                  try:
+                      page=get(f'https://music.163.com/album?id={album_id}')
+                      tracks=tracks_from_html(page)
+                      print(f'NetEase album {album_id}: {len(tracks)} tracks from album HTML')
+                  except Exception as e:
+                      print(f'NetEase HTML fallback for {album_id}: {e}')
               result.append({'id':album_id,'title':title,'tracks':tracks})
           Path('public/music-data.json').write_text(json.dumps({'albums':result},ensure_ascii=False,indent=2),encoding='utf-8')
           PY
