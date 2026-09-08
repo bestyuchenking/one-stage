@@ -127,7 +127,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 <<'PY'
-          import html,json,re,urllib.request,urllib.parse
+          import html,json,re,urllib.parse,urllib.request
           from pathlib import Path
           albums=[('385484900','牛马假日'),('385484965','池塘里的那片海')]
           headers={'User-Agent':'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/131 Safari/537.36','Referer':'https://music.163.com/','Accept-Language':'zh-CN,zh;q=0.9,en;q=0.8'}
@@ -137,18 +137,37 @@ jobs:
               with urllib.request.urlopen(req,timeout=25) as r:
                   return r.read().decode('utf-8','replace')
 
+          def post(url,form):
+              body=urllib.parse.urlencode(form).encode()
+              req=urllib.request.Request(url,data=body,headers={**headers,'Content-Type':'application/x-www-form-urlencoded'})
+              with urllib.request.urlopen(req,timeout=25) as r:
+                  return r.read().decode('utf-8','replace')
+
           def tracks_from_json(data):
               if not isinstance(data,dict): return []
               candidates=[]
               album=data.get('album')
               if isinstance(album,dict): candidates=album.get('songs') or []
-              if not candidates:
-                  candidates=data.get('songs') or data.get('result',{}).get('songs',[]) if isinstance(data.get('result',{}),dict) else []
+              if not candidates: candidates=data.get('songs') or []
+              if not candidates and isinstance(data.get('result'),dict): candidates=data['result'].get('songs') or []
               return [{'id':str(s.get('id')),'name':s.get('name','')} for s in candidates if isinstance(s,dict) and s.get('id')]
 
+          def tracks_from_search(data,album_id,title):
+              if not isinstance(data,dict): return []
+              result=data.get('result') or {}
+              songs=result.get('songs') if isinstance(result,dict) else []
+              out=[]
+              for s in songs or []:
+                  if not isinstance(s,dict) or not s.get('id'): continue
+                  al=s.get('album') or s.get('al') or {}
+                  aid=str(al.get('id',''))
+                  name=s.get('name','')
+                  if aid==str(album_id) or title in name or title in str(al.get('name','')):
+                      out.append({'id':str(s['id']),'name':name})
+              return out
+
           def tracks_from_html(text):
-              found=[]
-              seen=set()
+              found=[];seen=set()
               patterns=[
                   r'href=["\'](?:https?:)?//music\.163\.com/#/song\?id=(\d+)["\'][^>]*>(.*?)</a>',
                   r'href=["\']/song\?id=(\d+)["\'][^>]*>(.*?)</a>',
@@ -158,12 +177,10 @@ jobs:
                   for m in re.finditer(pat,text,re.S|re.I):
                       sid=m.group(1)
                       if sid in seen: continue
-                      name=re.sub(r'<[^>]+>','',m.group(2))
-                      name=html.unescape(name).strip()
-                      try: name=json.loads('"'+name+'"')
-                      except Exception: pass
-                      if name:
-                          seen.add(sid);found.append({'id':sid,'name':name})
+                      name=re.sub(r'<[^>]+>','',m.group(2));name=html.unescape(name).strip()
+                      try:name=json.loads('"'+name+'"')
+                      except Exception:pass
+                      if name:seen.add(sid);found.append({'id':sid,'name':name})
               return found
 
           result=[]
@@ -176,20 +193,29 @@ jobs:
               ]
               for url in endpoints:
                   try:
-                      data=json.loads(get(url))
-                      tracks=tracks_from_json(data)
+                      tracks=tracks_from_json(json.loads(get(url)))
                       if tracks:
-                          print(f'NetEase album {album_id}: {len(tracks)} tracks from API')
-                          break
-                  except Exception as e:
-                      print(f'NetEase API fallback for {album_id}: {e}')
+                          print(f'NetEase album {album_id}: {len(tracks)} tracks from API');break
+                  except Exception as e: print(f'NetEase API fallback for {album_id}: {e}')
+              if not tracks:
+                  try:
+                      q=urllib.parse.quote(title)
+                      for url in [f'https://music.163.com/api/search/pc?s={q}&type=1&offset=0&limit=50',f'https://music.163.com/api/search/get/web']:
+                          try:
+                              if url.endswith('/web'):
+                                  raw=post(url,{'s':title,'type':'1','offset':'0','total':'true','limit':'50'})
+                              else: raw=get(url)
+                              tracks=tracks_from_search(json.loads(raw),album_id,title)
+                              if tracks:
+                                  print(f'NetEase album {album_id}: {len(tracks)} tracks from search');break
+                          except Exception as e: print(f'NetEase search fallback for {album_id}: {e}')
+                  except Exception as e: print(f'NetEase search setup failed for {album_id}: {e}')
               if not tracks:
                   try:
                       page=get(f'https://music.163.com/album?id={album_id}')
                       tracks=tracks_from_html(page)
                       print(f'NetEase album {album_id}: {len(tracks)} tracks from album HTML')
-                  except Exception as e:
-                      print(f'NetEase HTML fallback for {album_id}: {e}')
+                  except Exception as e: print(f'NetEase HTML fallback for {album_id}: {e}')
               result.append({'id':album_id,'title':title,'tracks':tracks})
           Path('public/music-data.json').write_text(json.dumps({'albums':result},ensure_ascii=False,indent=2),encoding='utf-8')
           PY
