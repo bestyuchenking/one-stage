@@ -107,10 +107,24 @@ jobs:
             fi
             rm -f "$YT_XML"
           fi
-          python3 - "$YOUTUBE_VIDEO_ID" <<'PY'
+
+          # Bilibili: use the current known video to discover the UP主 MID,
+          # then query that UP主's public archive ordered by publication date.
+          # If Bilibili blocks the API, safely fall back to the last known BVID.
+          BILIBILI_BVID='BV18nbE6kE18'
+          BILI_HEADERS=(-A 'Mozilla/5.0' -H 'Referer: https://www.bilibili.com/')
+          VIEW_JSON=$(curl -fL --retry 2 --max-time 30 -sS "https://api.bilibili.com/x/web-interface/view?bvid=${BILIBILI_BVID}" "${BILI_HEADERS[@]}" || true)
+          BILI_MID=$(printf '%s' "$VIEW_JSON" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d.get("data",{}).get("owner",{}).get("mid", ""))' 2>/dev/null || true)
+          if [ -n "$BILI_MID" ]; then
+            ARCHIVE_JSON=$(curl -fL --retry 2 --max-time 30 -sS "https://api.bilibili.com/x/space/arc/search?mid=${BILI_MID}&ps=1&pn=1&order=pubdate" "${BILI_HEADERS[@]}" || true)
+            LATEST_BVID=$(printf '%s' "$ARCHIVE_JSON" | python3 -c 'import json,sys; d=json.load(sys.stdin); v=d.get("data",{}).get("list",{}).get("vlist",[]); print(v[0].get("bvid", "") if v else "")' 2>/dev/null || true)
+            if [[ "$LATEST_BVID" =~ ^BV[0-9A-Za-z]+$ ]]; then BILIBILI_BVID="$LATEST_BVID"; fi
+          fi
+
+          python3 - "$YOUTUBE_VIDEO_ID" "$BILIBILI_BVID" <<'PY'
           import json,sys
           from pathlib import Path
-          data={'youtubeVideoId':sys.argv[1],'bilibiliBvid':'BV18nbE6kE18'}
+          data={'youtubeVideoId':sys.argv[1],'bilibiliBvid':sys.argv[2]}
           Path('public/video-data.json').write_text(json.dumps(data,ensure_ascii=False,indent=2),encoding='utf-8')
           print('Video data:',data)
           PY
